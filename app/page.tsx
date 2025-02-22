@@ -32,7 +32,7 @@ export default function Home() {
 
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-12">
               Experience instant transactions and minimal fees while maintaining the security of Bitcoin.
-              Built for developers who need enterprise-grade scalability.
+              Built for developers who need degen-grade speed.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
