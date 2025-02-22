@@ -19,6 +19,11 @@ export const metadata: Metadata = {
     title: "Blaze Subnet Demo | Scale Bitcoin with Layer 2",
     description: "Experience the power of Blaze subnets - a Layer 2 scaling solution for Bitcoin. Process transactions instantly with minimal fees while maintaining security.",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+      },
+    ],
   },
 };
 
