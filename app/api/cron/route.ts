@@ -59,6 +59,7 @@ export async function GET() {
                 'Content-Type': 'application/json'
             }
         });
+
     } catch (error) {
         console.error('Error in cron job:', error);
         return new Response(JSON.stringify({
