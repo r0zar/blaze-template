@@ -1,6 +1,6 @@
 import { Footer } from '@/components/Footer';
 import ActionButtons from "@/components/ActionButton";
-import { BookOpen, Github, Zap, CircleDollarSign, Code, Flame } from "lucide-react";
+import { BookOpen, Github, CircleDollarSign, Code, Flame } from "lucide-react";
 
 export default function Home() {
   return (

@@ -1,4 +1,4 @@
-import { Subnet, Transfer } from "blaze-sdk";
+import { Subnet } from "blaze-sdk";
 
 // Export a single shared instance
 export const subnet = new Subnet();

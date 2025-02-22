@@ -1,6 +1,6 @@
 'use client';
 
-import blaze, { subnetTokens, Transaction, Transfer, TxRequest, WELSH } from "blaze-sdk";
+import blaze, { Transaction } from "blaze-sdk";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,9 +10,6 @@ import {
     ArrowRightLeft,
     Loader2,
     PlusCircle,
-    BookOpen,
-    Github,
-    Coins
 } from "lucide-react";
 
 function ActionButtons() {
