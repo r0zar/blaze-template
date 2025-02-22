@@ -19,3 +19,18 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.mesh-gradient {
+  background: radial-gradient(at 0% 0%, #ff4b4b 0%, transparent 50%),
+              radial-gradient(at 100% 0%, #7928ca 0%, transparent 50%),
+              radial-gradient(at 100% 100%, #ff0080 0%, transparent 50%),
+              radial-gradient(at 0% 100%, #ff4d4d 0%, transparent 50%);
+  filter: blur(100px);
+  animation: meshMove 20s ease infinite;
+}
+
+@keyframes meshMove {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}

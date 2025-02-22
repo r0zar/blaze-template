@@ -1,7 +1,13 @@
-import type { NextConfig } from "next";
+const path = require('path')
 
-const nextConfig: NextConfig = {
-  /* config options here */
-};
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  transpilePackages: ['blaze-sdk'],
+  webpack: (config: any, { isServer }: any) => {
+    config.resolve.symlinks = true
+    config.resolve.alias['blaze-sdk'] = path.resolve('./node_modules/blaze-sdk')
+    return config
+  }
+}
 
-export default nextConfig;
+module.exports = nextConfig
