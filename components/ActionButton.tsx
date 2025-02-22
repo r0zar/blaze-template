@@ -72,6 +72,7 @@ function ActionButtons() {
                         const queue = message.queue || [];
 
                         // Ensure we're getting an array and it's not empty
+                        console.log('Pending transactions:', queue.length);
                         if (Array.isArray(queue)) {
                             setTxRequests(queue);
                             setIsLoading(false);
