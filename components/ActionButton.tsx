@@ -213,6 +213,7 @@ function ActionButtons() {
                     </button>
 
                     <button
+                        disabled={true}
                         className="p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-purple-500 dark:hover:border-purple-500 transition-all hover:shadow-lg group"
                         onClick={() => blaze.transfer({ amount: 1, to: 'SP2ZNGJ85ENDY6QRHQ5P2D4FXKGZWCKTB2T0Z55KS' })}
                     >
@@ -226,6 +227,7 @@ function ActionButtons() {
                     </button>
 
                     <button
+                        disabled={true}
                         className="p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-purple-500 dark:hover:border-purple-500 transition-all hover:shadow-lg group"
                         onClick={() => blaze.deposit(1)}
                     >
@@ -239,6 +241,7 @@ function ActionButtons() {
                     </button>
 
                     <button
+                        disabled={true}
                         className="p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-purple-500 dark:hover:border-purple-500 transition-all hover:shadow-lg group"
                         onClick={() => blaze.withdraw(1)}
                     >
