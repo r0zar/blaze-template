@@ -1,0 +1,96 @@
+/* Tour Styles */
+.react-joyride__tooltip {
+  border-radius: 0.75rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(245, 158, 11, 0.2) !important;
+  overflow: hidden !important;
+}
+
+.react-joyride__tooltip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(to right, #F59E0B, #D97706);
+}
+
+.react-joyride__tooltip [data-action="close"] {
+  color: #9CA3AF !important;
+}
+
+.react-joyride__tooltip [data-action="close"]:hover {
+  color: #6B7280 !important;
+}
+
+.react-joyride__tooltip [data-action="primary"] {
+  background-color: #F59E0B !important;
+  border-radius: 0.375rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.react-joyride__tooltip [data-action="primary"]:hover {
+  background-color: #D97706 !important;
+}
+
+.react-joyride__tooltip [data-action="back"] {
+  color: #6B7280 !important;
+  font-weight: 500 !important;
+}
+
+.react-joyride__tooltip [data-action="back"]:hover {
+  color: #4B5563 !important;
+}
+
+.react-joyride__tooltip [data-action="skip"] {
+  color: #6B7280 !important;
+  font-weight: 500 !important;
+}
+
+.react-joyride__tooltip [data-action="skip"]:hover {
+  color: #4B5563 !important;
+}
+
+.react-joyride__spotlight {
+  border-radius: 0.5rem !important;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .react-joyride__tooltip {
+    background-color: #1F2937 !important;
+    color: #E5E7EB !important;
+    border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  }
+  
+  .react-joyride__tooltip [data-action="close"] {
+    color: #9CA3AF !important;
+  }
+  
+  .react-joyride__tooltip [data-action="close"]:hover {
+    color: #D1D5DB !important;
+  }
+  
+  .react-joyride__tooltip [data-action="back"] {
+    color: #9CA3AF !important;
+  }
+  
+  .react-joyride__tooltip [data-action="back"]:hover {
+    color: #D1D5DB !important;
+  }
+  
+  .react-joyride__tooltip [data-action="skip"] {
+    color: #9CA3AF !important;
+  }
+  
+  .react-joyride__tooltip [data-action="skip"]:hover {
+    color: #D1D5DB !important;
+  }
+  
+  .react-joyride__spotlight {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85) !important;
+  }
+} 

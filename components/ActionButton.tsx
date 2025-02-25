@@ -39,20 +39,10 @@ function ActionButtons() {
         setIsWalletConnected(walletConnected);
 
         if (walletConnected) {
-            const address = blaze.getWalletAddress();
-
-            // Initialize balance for the wallet if it doesn't exist
-            setBalances((prevBalances: Record<string, number>) => {
-                if (!prevBalances[address]) {
-                    return { ...prevBalances, [address]: 0 };
-                }
-                return prevBalances;
-            });
-
             fetch('/api/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user: address })
+                body: JSON.stringify({ user: blaze.getWalletAddress() })
             });
         }
     }, [blaze.signer]);
@@ -372,7 +362,7 @@ function ActionButtons() {
             </AnimatePresence>
 
             {/* Balances Section */}
-            <div className="mb-12 p-6 rounded-xl bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-800 backdrop-blur-sm relative z-10">
+            <div className="mb-12 p-6 rounded-xl bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-800 backdrop-blur-sm relative z-10" data-tour="balances-section">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-semibold">Subnet Balances</h2>
                     <div className="flex items-center gap-3">
@@ -383,10 +373,11 @@ function ActionButtons() {
                             variant="badge"
                             size="sm"
                             label="View Contract"
+                            data-tour="explorer-link"
                         />
                     </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-tour="wallet-cards">
                     {Object.entries(balances).map(([address, balance]) => (
                         <div
                             key={address}
@@ -437,12 +428,13 @@ function ActionButtons() {
             </div>
 
             {/* Actions Section */}
-            <div className="mb-12 relative z-10">
+            <div className="mb-12 relative z-10" data-tour="action-buttons">
                 <h3 className="text-xl font-semibold mb-6">Subnet Actions</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <button
                         className={`backdrop-blur-lg p-4 rounded-lg ${isWalletConnected ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' : 'bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800'} hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group`}
                         onClick={toggleWalletConnection}
+                        data-tour="wallet-connect"
                     >
                         <div className="flex items-center gap-3 mb-2">
                             <div className={`w-8 h-8 rounded-full ${isWalletConnected ? 'bg-gradient-to-br from-red-100 via-red-100 to-red-100/50 dark:from-red-900/70 dark:via-red-900/50 dark:to-red-900/30' : 'bg-gradient-to-br from-green-100 via-green-100 to-green-100/50 dark:from-green-900/70 dark:via-green-900/50 dark:to-green-900/30'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
@@ -469,6 +461,7 @@ function ActionButtons() {
                             // Trigger success animation
                             triggerSuccessAnimation();
                         }}
+                        data-tour="transfer-button"
                     >
                         <div className="flex items-center gap-3 mb-2">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-100 via-red-100 to-yellow-100/50 dark:from-red-900/70 dark:via-red-900/50 dark:to-yellow-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -517,11 +510,11 @@ function ActionButtons() {
             </div>
 
             {/* Transactions Section */}
-            <div className="relative z-10">
+            <div className="relative z-10" data-tour="transaction-list">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
                         <h3 className="text-xl font-semibold">Recent Transactions</h3>
-                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getPillClasses()}`}>
+                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getPillClasses()}`} data-tour="batch-timer">
                             <div className={`w-2 h-2 rounded-full ${getIndicatorClasses()}`} />
                             <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
                                 {isSettling ? 'Mining transaction batch...' :

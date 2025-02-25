@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./tour.css";
 import FloatingElements from "@/components/FloatingElements";
 import NavButton from "@/components/NavButton";
 
