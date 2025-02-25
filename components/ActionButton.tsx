@@ -23,9 +23,13 @@ function ActionButtons() {
     const [balances, setBalances] = useState<any>({ 'SP2ZNGJ85ENDY6QRHQ5P2D4FXKGZWCKTB2T0Z55KS': 0, 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ': 0 });
     const [message, setMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [nextBatchTime, setNextBatchTime] = useState<number>(30); // 30 second batches
+    const [nextBatchTime, setNextBatchTime] = useState(30);
     const [isSettling, setIsSettling] = useState(false);
-    const [lastSettlement, setLastSettlement] = useState<{ batchSize: number; timestamp: number; txId?: string } | null>(null);
+    const [lastSettlement, setLastSettlement] = useState<{
+        batchSize: number;
+        timestamp: number;
+        txId?: string;
+    } | null>(null);
     const [transactionCounter, setTransactionCounter] = useState(0);
     const [isWalletConnected, setIsWalletConnected] = useState(false);
     const [selectedTargetAddress, setSelectedTargetAddress] = useState<string | null>(null);
@@ -116,94 +120,170 @@ function ActionButtons() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user: blaze.getWalletAddress() })
             });
+
             if (!response.ok) {
+                // Handle specific error codes
+                if (response.status === 409) {
+                    setMessageTitle(`Batch Processing In Progress`);
+                    setMessage(`A batch is already being processed`);
+                } else if (response.status === 423) {
+                    setMessageTitle(`Batch Lock Error`);
+                    setMessage(`Could not acquire lock for batch processing`);
+                } else if (response.status === 400) {
+                    setMessageTitle(`No Transactions`);
+                    setMessage(`There are no transactions in the queue to settle`);
+                } else {
+                    setMessageTitle(`Settlement Failed`);
+                    setMessage(`Failed to settle batch: ${response.statusText}`);
+                }
+                setTimeout(() => setMessage(null), 5000);
                 console.error('Failed to settle batch:', response.statusText);
             } else {
                 const data = await response.json();
                 console.log('Settlement data:', data);
+
+                // Update settlement information
                 setLastSettlement({
-                    batchSize: data.batchSize,
-                    timestamp: data.timestamp,
+                    batchSize: data.batchSize || 0,
+                    timestamp: Date.now(),
                     txId: data.txid
                 });
+
                 // Set message for toast notification
-                setMessageTitle(`Batch mined`);
-                setMessage(`All transactions have been batched and broadcast on-chain`);
+                setMessageTitle(`Batch settled`);
+                setMessage(data.message || `Transactions have been batched and broadcast on-chain`);
+
                 // Trigger success animation
                 triggerSuccessAnimation();
+
                 // Clear message after 5 seconds
                 setTimeout(() => setMessage(null), 5000);
             }
         } catch (error) {
             console.error('Error settling batch:', error);
+            setMessageTitle(`Settlement Error`);
+            setMessage(`An error occurred while settling the batch`);
+            setTimeout(() => setMessage(null), 5000);
         } finally {
             setIsSettling(false);
         }
     };
 
+    // Update component to better handle timer updates
     useEffect(() => {
-        fetch('/api/subscribe')
-            .then(response => response.body)
-            .then(async body => {
-                const reader = body?.getReader();
-                while (true) {
-                    const { done, value } = await reader?.read() || {};
-                    if (done) {
-                        console.log('Stream complete');
-                        break;
-                    }
-                    const rawMessage = new TextDecoder().decode(value);
-                    const message = JSON.parse(rawMessage.split('data: ')[1]);
+        let eventSource: EventSource | null = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        const reconnectDelay = 3000; // Base delay in ms
 
-                    // Handle settlement notifications
-                    if (message.settlement) {
-                        setLastSettlement(message.settlement);
-                        setIsSettling(false);
-                    }
+        const connectSSE = () => {
+            console.log('Connecting to SSE stream...');
 
-                    // Extract queue from the correct path
-                    const queue = message.queue || [];
+            // Close any existing connection
+            if (eventSource) {
+                eventSource.close();
+            }
 
-                    // Ensure we're getting an array and it's not empty
-                    console.log('Pending transactions:', queue.length);
-                    if (Array.isArray(queue)) {
-                        setTxRequests(queue);
-                        setIsLoading(false);
+            eventSource = new EventSource('/api/subscribe');
+
+            eventSource.onopen = () => {
+                console.log('SSE connection opened successfully');
+                setIsLoading(false);
+                reconnectAttempts = 0; // Reset attempts on successful connection
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('SSE connection error:', error);
+
+                if (eventSource) {
+                    eventSource.close();
+
+                    // Try to reconnect with exponential backoff if under max attempts
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        const delay = reconnectDelay * Math.pow(1.5, reconnectAttempts - 1);
+                        console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})...`);
+                        setTimeout(connectSSE, delay);
                     } else {
-                        console.warn('Queue is not an array:', queue);
+                        console.error(`Failed to reconnect after ${maxReconnectAttempts} attempts`);
+                        setMessageTitle("Connection Error");
+                        setMessage("Failed to connect to server. Please refresh the page.");
+                    }
+                }
+            };
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    // Debug timer updates
+                    if (data.nextBatchTime !== undefined) {
+                        console.log(`Timer update received: ${data.nextBatchTime}s`);
+                        setNextBatchTime(data.nextBatchTime);
+                    }
+
+                    // Handle batch processing status
+                    if (data.isProcessingBatch !== undefined) {
+                        setIsSettling(data.isProcessingBatch);
+                    }
+
+                    // Check for settlement events
+                    if (data.settlement) {
+                        console.log('Settlement event received:', data.settlement);
+
+                        // Update settlement information
+                        setLastSettlement({
+                            batchSize: data.settlement.batchSize,
+                            timestamp: data.settlement.timestamp,
+                            txId: data.settlement.txid
+                        });
+
+                        // Set message for toast notification
+                        setMessageTitle(`Batch mined`);
+                        setMessage(`${data.settlement.batchSize} transactions have been batched and broadcast on-chain`);
+
+                        // Trigger success animation
+                        triggerSuccessAnimation();
+
+                        // Clear message after 5 seconds
+                        setTimeout(() => setMessage(null), 5000);
                     }
 
                     // Update balances
-                    if (message.balances) {
-                        setBalances((balances: any) => ({ ...balances, ...message.balances }));
+                    if (data.balances) {
+                        setBalances(data.balances);
                     }
 
-                    // Handle notification message
-                    if (message.text) {
-                        setMessage(message.text);
-                        setMessageTitle("Transaction submitted");
-                        setTimeout(() => setMessage(null), 5000);
+                    // Update transaction queue
+                    if (data.queue) {
+                        setTxRequests(data.queue);
                     }
-                }
-            }).catch(error => {
-                console.error('Error processing message:', error);
-                setIsLoading(false);
-            });
 
-        // Countdown timer effect
-        const interval = setInterval(() => {
-            setNextBatchTime(prev => {
-                if (prev <= 0) {
-                    // Trigger batch settlement
-                    settleBatch();
-                    return 30; // Reset to 30 seconds
+                    // Exit loading state once we've received data
+                    if (isLoading) {
+                        setIsLoading(false);
+                    }
+                } catch (error) {
+                    console.error('Error parsing SSE data:', error);
                 }
-                return prev - 1;
-            });
-        }, 1000);
+            };
+        };
 
-        return () => clearInterval(interval);
+        connectSSE();
+
+        // Clean up function to close the EventSource
+        return () => {
+            if (eventSource) {
+                console.log('Closing SSE connection');
+                eventSource.close();
+            }
+        };
     }, []);
+
+    // Add this new useEffect to log timer updates outside of the SSE connection
+    useEffect(() => {
+        console.log(`Timer state updated in component: ${nextBatchTime}s`);
+    }, [nextBatchTime]);
 
     // Helper function to format timestamp
     const formatTimestamp = (nonce: number | string) => {
@@ -218,13 +298,14 @@ function ActionButtons() {
         return `${address.slice(0, 8)}...${address.slice(-4)}`;
     };
 
-    // Helper function to format countdown
+    // Helper function to format countdown - make it more responsive to timer changes
     const formatCountdown = (seconds: number) => {
-        if (isSettling) return 'Mining batch...';
+        if (isSettling) return 'Mining transaction batch...';
         if (lastSettlement && Date.now() - lastSettlement.timestamp < 2000) {
             return `Mined batch of ${lastSettlement.batchSize} transactions`;
         }
-        return `${seconds}s`;
+        // Ensure we're always showing the latest timer value
+        return `Next batch in ${seconds}s`;
     };
 
     // Helper function to get the pill color based on state
@@ -517,10 +598,7 @@ function ActionButtons() {
                         <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getPillClasses()}`} data-tour="batch-timer">
                             <div className={`w-2 h-2 rounded-full ${getIndicatorClasses()}`} />
                             <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-                                {isSettling ? 'Mining transaction batch...' :
-                                    lastSettlement && Date.now() - lastSettlement.timestamp < 2000 ?
-                                        `Mined batch of ${lastSettlement.batchSize} transactions` :
-                                        `Next batch in ${nextBatchTime}s`}
+                                {formatCountdown(nextBatchTime)}
                             </span>
                         </div>
                         {lastSettlement && lastSettlement.txId && Date.now() - lastSettlement.timestamp < 10000 && (
