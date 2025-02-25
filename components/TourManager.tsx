@@ -21,7 +21,9 @@ const typedTourSteps: Step[] = tourSteps.map(step => {
         title: step.title,
         // Only include styles if they exist
         ...(step.styles ? { styles: step.styles } : {}),
-        // Omit floaterProps as it's causing type issues with the newer version
+        // Add scrolling properties
+        disableScrolling: step.disableScrolling === false ? false : undefined,
+        disableOverlay: step.disableOverlay === false ? false : undefined,
     };
 
     return typedStep;
@@ -45,6 +47,7 @@ const safeLocalStorage = {
 export default function TourManager({ isNavTourButtonClicked, onTourComplete }: TourManagerProps) {
     const [runTour, setRunTour] = useState(false);
     const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
+    const [currentStep, setCurrentStep] = useState(0);
 
     // Check if this is the user's first visit
     useEffect(() => {
@@ -58,11 +61,34 @@ export default function TourManager({ isNavTourButtonClicked, onTourComplete }: 
     useEffect(() => {
         if (isNavTourButtonClicked) {
             setRunTour(true);
+            setCurrentStep(0);
         }
     }, [isNavTourButtonClicked]);
 
+    // Handle scrolling for specific steps
+    useEffect(() => {
+        if (runTour && (currentStep === 3 || currentStep === 4)) {
+            const targetSelector = tourSteps[currentStep].target as string;
+            const targetElement = document.querySelector(targetSelector);
+
+            if (targetElement) {
+                setTimeout(() => {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }, 300);
+            }
+        }
+    }, [currentStep, runTour]);
+
     const handleTourCallback = (data: CallBackProps) => {
-        const { status, type, action } = data;
+        const { status, type, action, index } = data;
+
+        // Update current step
+        if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
+            setCurrentStep(index + (action === ACTIONS.PREV ? -1 : 1));
+        }
 
         // Handle skip button click to show confirmation
         if (action === ACTIONS.SKIP && runTour) {

@@ -39,7 +39,14 @@ export const tourSteps = [
         target: '[data-tour="wallet-cards"]',
         title: 'Transfer Targets',
         content: 'Select a wallet address to send funds to. You can choose from existing addresses or enter a custom one.',
-        placement: 'top',
+        placement: 'bottom',
+        disableOverlay: false,
+        disableScrolling: false,
+        styles: {
+            options: {
+                zIndex: 10000,
+            },
+        },
     },
 
     // Step 5: Subnet Actions
@@ -47,7 +54,14 @@ export const tourSteps = [
         target: '[data-tour="action-buttons"]',
         title: 'Subnet Actions',
         content: 'Perform key operations like transfers between subnet addresses, deposits from L1, and withdrawals back to L1.',
-        placement: 'top',
+        placement: 'bottom',
+        disableOverlay: false,
+        disableScrolling: false,
+        styles: {
+            options: {
+                zIndex: 10000,
+            },
+        },
     },
 
     // Step 6: Transaction Queue

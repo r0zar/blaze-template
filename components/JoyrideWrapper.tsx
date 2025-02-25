@@ -37,9 +37,33 @@ export default function JoyrideWrapper({
         };
     }, []);
 
+    // Custom callback wrapper to handle scrolling issues
+    const handleCallback = (data: CallBackProps) => {
+        const { index, type, action } = data;
+
+        // Fix scrolling for steps 4 and 5 (index 3 and 4)
+        if (type === 'step:after' && (index === 3 || index === 4)) {
+            // Give the browser a moment to process before scrolling
+            setTimeout(() => {
+                const targetElement = document.querySelector(steps[index].target as string);
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }
+            }, 100);
+        }
+
+        // Pass the data to the original callback
+        if (callback) {
+            callback(data);
+        }
+    };
+
     return (
         <Joyride
-            callback={callback}
+            callback={handleCallback}
             continuous={continuous}
             hideCloseButton={hideCloseButton}
             run={run}
@@ -49,6 +73,9 @@ export default function JoyrideWrapper({
             steps={steps}
             styles={styles}
             locale={locale}
+            scrollOffset={100}
+            disableScrolling={false}
+            scrollDuration={300}
         />
     );
 } 
