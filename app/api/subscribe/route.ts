@@ -161,13 +161,28 @@ export async function GET(request: Request) {
             const nextBatchTime = await kvStore.getNextBatchTime();
             const isProcessingBatch = await kvStore.isProcessingBatch();
 
+            // Get tracked wallets to include in the response
+            // This helps show all wallets that have connected, even if not currently active
+            const trackedWallets = await kvStore.getTrackedWallets();
+
+            // Add any tracked wallets that aren't already in the balances
+            const enhancedBalances = { ...balances };
+            for (const walletAddress of trackedWallets) {
+                if (!enhancedBalances[walletAddress]) {
+                    // If this wallet exists in our tracking but not in current balances,
+                    // add it with a zero balance (or you could query for its actual balance)
+                    enhancedBalances[walletAddress] = 0;
+                }
+            }
+
             const eventData = {
                 status,
                 time: new Date().toISOString(),
                 queue,
-                balances,
+                balances: enhancedBalances,
                 nextBatchTime,
-                isProcessingBatch
+                isProcessingBatch,
+                trackedWallets // Include list of all wallets that have connected
             };
 
             await sendEvent(eventData);

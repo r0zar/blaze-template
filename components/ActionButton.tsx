@@ -79,11 +79,26 @@ function ActionButtons() {
     const toggleWalletConnection = async () => {
         if (isWalletConnected) {
             // Disconnect wallet
+            const address = blaze.getWalletAddress();
             blaze.disconnectWallet();
             setIsWalletConnected(false);
             setMessage("Wallet disconnected successfully");
             setMessageTitle("Wallet disconnected");
             setTimeout(() => setMessage(null), 5000);
+
+            // Track wallet disconnection
+            try {
+                await fetch('/api/wallet/track', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        address,
+                        action: 'disconnect'
+                    })
+                });
+            } catch (error) {
+                console.error('Error tracking wallet disconnection:', error);
+            }
         } else {
             // Connect wallet
             const address = await blaze.connectWallet();
@@ -107,6 +122,22 @@ function ActionButtons() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user: address })
                 });
+
+                // Track wallet connection
+                try {
+                    const currentBalance = balances[address] || 0;
+                    await fetch('/api/wallet/track', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            address,
+                            action: 'connect',
+                            balance: currentBalance
+                        })
+                    });
+                } catch (error) {
+                    console.error('Error tracking wallet connection:', error);
+                }
             }
         }
     };
@@ -175,6 +206,7 @@ function ActionButtons() {
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
         const reconnectDelay = 3000; // Base delay in ms
+        let heartbeatInterval: NodeJS.Timeout | null = null;
 
         const connectSSE = () => {
             console.log('Connecting to SSE stream...');
@@ -190,6 +222,24 @@ function ActionButtons() {
                 console.log('SSE connection opened successfully');
                 setIsLoading(false);
                 reconnectAttempts = 0; // Reset attempts on successful connection
+
+                // Set up heartbeat to periodically update wallet activity if connected
+                if (heartbeatInterval) clearInterval(heartbeatInterval);
+                heartbeatInterval = setInterval(() => {
+                    // Send heartbeat to update wallet last seen time
+                    const address = blaze.getWalletAddress();
+                    if (isWalletConnected && address) {
+                        fetch('/api/wallet/track', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                address,
+                                action: 'update',
+                                balance: balances[address] || 0
+                            })
+                        }).catch(err => console.error('Error sending wallet heartbeat:', err));
+                    }
+                }, 60000); // Update every minute
             };
 
             eventSource.onerror = (error) => {
@@ -276,6 +326,9 @@ function ActionButtons() {
             if (eventSource) {
                 console.log('Closing SSE connection');
                 eventSource.close();
+            }
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
             }
         };
     }, []);

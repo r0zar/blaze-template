@@ -5,6 +5,8 @@ const KV_NEXT_BATCH_TIME = 'nextBatchTime';
 const KV_LAST_BATCH_TIME = 'lastBatchTime';
 const KV_IS_PROCESSING_BATCH = 'isProcessingBatch';
 const KV_BATCH_LOCK_PREFIX = 'lock:'; // Prefix for lock keys
+const KV_CONNECTED_WALLETS = 'connectedWallets'; // For tracking wallets that have connected
+const KV_WALLET_LAST_SEEN = 'wallet:lastSeen:'; // Prefix for tracking when a wallet was last seen
 
 // Default values
 const DEFAULT_BATCH_TIME = 30; // 30 second countdown
@@ -193,5 +195,98 @@ export async function initializeKV(): Promise<void> {
         console.log('KV store initialized with default values');
     } catch (error) {
         console.error('Error initializing KV values:', error);
+    }
+}
+
+/**
+ * Track a wallet in the KV store when it connects
+ * Stores both in the wallets list and records last active timestamp
+ * 
+ * @param walletAddress The wallet address to track
+ * @param balanceAmount The initial balance amount
+ */
+export async function trackConnectedWallet(walletAddress: string, balanceAmount: number = 0): Promise<void> {
+    try {
+        if (!walletAddress) return;
+
+        // Update the last seen timestamp for this wallet
+        await kv.set(`${KV_WALLET_LAST_SEEN}${walletAddress}`, Date.now());
+
+        // Add to the set of all wallets if not already there
+        // Using a Redis SET data structure to avoid duplicates
+        await kv.sadd(KV_CONNECTED_WALLETS, walletAddress);
+
+        console.log(`Tracked wallet ${walletAddress} in KV store`);
+    } catch (error) {
+        console.error('Error tracking connected wallet in KV:', error);
+    }
+}
+
+/**
+ * Update the last seen timestamp for a wallet
+ * Call this periodically while a wallet is active
+ * 
+ * @param walletAddress The wallet address to update
+ */
+export async function updateWalletLastSeen(walletAddress: string): Promise<void> {
+    try {
+        if (!walletAddress) return;
+        await kv.set(`${KV_WALLET_LAST_SEEN}${walletAddress}`, Date.now());
+    } catch (error) {
+        console.error('Error updating wallet last seen timestamp in KV:', error);
+    }
+}
+
+/**
+ * Get all tracked wallets from the KV store
+ * Returns an array of wallet addresses
+ */
+export async function getTrackedWallets(): Promise<string[]> {
+    try {
+        const wallets = await kv.smembers(KV_CONNECTED_WALLETS);
+        return wallets || [];
+    } catch (error) {
+        console.error('Error getting tracked wallets from KV:', error);
+        return [];
+    }
+}
+
+/**
+ * Get the last seen timestamp for a specific wallet
+ * 
+ * @param walletAddress The wallet address to check
+ */
+export async function getWalletLastSeen(walletAddress: string): Promise<number | null> {
+    try {
+        if (!walletAddress) return null;
+        return await kv.get<number>(`${KV_WALLET_LAST_SEEN}${walletAddress}`);
+    } catch (error) {
+        console.error('Error getting wallet last seen timestamp from KV:', error);
+        return null;
+    }
+}
+
+/**
+ * Remove wallets that haven't been seen for a certain period
+ * Call this periodically to clean up old wallet entries
+ * 
+ * @param maxAgeMs Maximum age in milliseconds before a wallet is considered inactive
+ */
+export async function cleanupInactiveWallets(maxAgeMs: number = 24 * 60 * 60 * 1000): Promise<void> {
+    try {
+        const now = Date.now();
+        const wallets = await getTrackedWallets();
+
+        for (const wallet of wallets) {
+            const lastSeen = await getWalletLastSeen(wallet);
+            if (lastSeen && now - lastSeen > maxAgeMs) {
+                // Remove wallet if not seen for the specified time
+                await kv.srem(KV_CONNECTED_WALLETS, wallet);
+                await kv.del(`${KV_WALLET_LAST_SEEN}${wallet}`);
+                console.log(`Removed inactive wallet ${wallet} from KV store`);
+            }
+        }
+    } catch (error) {
+        console.error('Error cleaning up inactive wallets in KV:', error);
     }
 } 
