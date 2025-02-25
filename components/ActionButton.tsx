@@ -51,15 +51,65 @@ function ActionButtons() {
             setMessage("Wallet disconnected successfully");
             setTimeout(() => setMessage(null), 5000);
         } else {
-            // Connect wallet
-            const address = await blaze.connectWallet();
-            if (address) {
-                setIsWalletConnected(true);
-                setMessage("Wallet connected successfully");
+            try {
+                // Connect wallet
+                const address = await blaze.connectWallet();
+                if (address) {
+                    setIsWalletConnected(true);
+                    setMessage("Wallet connected successfully");
+                    setTimeout(() => setMessage(null), 5000);
+                    // Refresh balances
+                    fetch('/api/refresh', { method: 'POST', body: JSON.stringify({ user: address }) });
+                }
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                setMessage("Failed to connect wallet. Please try again.");
                 setTimeout(() => setMessage(null), 5000);
-                // Refresh balances
-                fetch('/api/refresh', { method: 'POST', body: JSON.stringify({ user: address }) });
             }
+        }
+    };
+
+    // Function to safely handle transactions with error handling
+    const safeTransaction = async (txType: 'transfer' | 'deposit' | 'withdraw', params: any) => {
+        if (!isWalletConnected) return;
+
+        try {
+            let result;
+
+            if (txType === 'transfer') {
+                result = await blaze.transfer(params);
+            } else if (txType === 'deposit') {
+                result = await blaze.deposit(params);
+            } else if (txType === 'withdraw') {
+                result = await blaze.withdraw(params);
+            }
+
+            // Trigger success animation
+            triggerSuccessAnimation();
+
+            // Show success message
+            const actionName = txType.charAt(0).toUpperCase() + txType.slice(1);
+            setMessage(`${actionName} successful`);
+            setTimeout(() => setMessage(null), 5000);
+
+            return result;
+        } catch (error: any) {
+            console.error(`${txType} error:`, error);
+
+            // Show error message
+            let errorMessage = `${txType.charAt(0).toUpperCase() + txType.slice(1)} failed. `;
+
+            // Check for specific error types
+            if (error.message && error.message.includes('Domain must be a tuple')) {
+                errorMessage += "Wallet connection issue. Please try reconnecting your wallet.";
+            } else {
+                errorMessage += "Please try again.";
+            }
+
+            setMessage(errorMessage);
+            setTimeout(() => setMessage(null), 5000);
+
+            throw error;
         }
     };
 
@@ -299,11 +349,13 @@ function ActionButtons() {
                     <button
                         disabled={!isWalletConnected}
                         className={`backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
-                        onClick={() => {
+                        onClick={async () => {
                             if (!isWalletConnected) return;
-                            blaze.transfer({ amount: 1000000, to: 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ' });
-                            // Trigger success animation
-                            triggerSuccessAnimation();
+                            try {
+                                await safeTransaction('transfer', { amount: 1000000, to: 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ' });
+                            } catch (error) {
+                                // Error is already handled in safeTransaction
+                            }
                         }}
                     >
                         <div className="flex items-center gap-3 mb-2">
@@ -318,9 +370,13 @@ function ActionButtons() {
                     <button
                         disabled={!isWalletConnected}
                         className={`backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
-                        onClick={() => {
+                        onClick={async () => {
                             if (!isWalletConnected) return;
-                            blaze.deposit(10000000);
+                            try {
+                                await safeTransaction('deposit', 10000000);
+                            } catch (error) {
+                                // Error is already handled in safeTransaction
+                            }
                         }}
                     >
                         <div className="flex items-center gap-3 mb-2">
@@ -335,9 +391,13 @@ function ActionButtons() {
                     <button
                         disabled={!isWalletConnected}
                         className={`backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
-                        onClick={() => {
+                        onClick={async () => {
                             if (!isWalletConnected) return;
-                            blaze.withdraw(5000000);
+                            try {
+                                await safeTransaction('withdraw', 5000000);
+                            } catch (error) {
+                                // Error is already handled in safeTransaction
+                            }
                         }}
                     >
                         <div className="flex items-center gap-3 mb-2">
@@ -370,9 +430,11 @@ function ActionButtons() {
                         disabled={!isWalletConnected}
                         onClick={async () => {
                             if (!isWalletConnected) return;
-                            await blaze.transfer({ amount: 1000000, to: 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ' });
-                            // Trigger success animation
-                            triggerSuccessAnimation();
+                            try {
+                                await safeTransaction('transfer', { amount: 1000000, to: 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ' });
+                            } catch (error) {
+                                // Error is already handled in safeTransaction
+                            }
                         }}
                         className={`px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-600 via-yellow-700 to-yellow-800 text-white hover:opacity-90 transition-opacity text-sm font-medium ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
                     >
