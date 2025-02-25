@@ -10,6 +10,7 @@ import {
     ArrowRightLeft,
     Loader2,
     PlusCircle,
+    LogOut,
 } from "lucide-react";
 import FloatingElements from "./FloatingElements";
 
@@ -23,13 +24,18 @@ function ActionButtons() {
     const [isSettling, setIsSettling] = useState(false);
     const [lastSettlement, setLastSettlement] = useState<{ batchSize: number; timestamp: number } | null>(null);
     const [transactionCounter, setTransactionCounter] = useState(0);
+    const [isWalletConnected, setIsWalletConnected] = useState(false);
 
     // refresh balances on load
     useEffect(() => {
-        if (blaze.isWalletConnected()) {
+        // Check if wallet is connected on component mount
+        const walletConnected = blaze.isWalletConnected();
+        setIsWalletConnected(walletConnected);
+
+        if (walletConnected) {
             fetch('/api/refresh', { method: 'POST', body: JSON.stringify({ user: blaze.getWalletAddress() }) });
         }
-    }, [blaze]);
+    }, []);
 
     // Function to trigger transaction success animation
     const triggerSuccessAnimation = () => {
