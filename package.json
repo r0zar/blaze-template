@@ -26,10 +26,5 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  },
-  "pnpm": {
-    "overrides": {
-      "blaze-sdk": "link:../blaze"
-    }
   }
 }
