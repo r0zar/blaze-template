@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Flame, Menu, X, ExternalLink, BarChart2 } from 'lucide-react';
+import { Flame, Menu, X, ExternalLink, BarChart2, Home } from 'lucide-react';
 
 export default function NavButton() {
     const [isOpen, setIsOpen] = useState(false);
@@ -17,18 +17,19 @@ export default function NavButton() {
             </button>
 
             {isOpen && (
-                <div className="absolute top-16 right-0 w-64 bg-white dark:bg-black/80 rounded-xl shadow-xl p-4 border border-gray-200 dark:border-gray-800">
+                <div className="absolute top-16 right-0 w-72 bg-white dark:bg-black/80 rounded-xl shadow-xl p-4 border border-gray-200 dark:border-gray-800">
                     <div className="flex items-center gap-2 mb-4">
                         <Flame className="w-5 h-5 text-[#B22222] dark:text-[#B22222]" />
-                        <span className="font-semibold">Blaze Subnet Demo</span>
+                        <span className="font-semibold">Blaze Subnet</span>
                     </div>
                     <div className="space-y-2">
                         <Link
                             href="/"
-                            className="block px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300"
+                            className="block px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300 flex items-center gap-2"
                             onClick={() => setIsOpen(false)}
                         >
-                            Home
+                            <Home className="w-4 h-4" />
+                            Homepage Demo
                         </Link>
                         <Link
                             href="/explorer"
