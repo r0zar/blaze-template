@@ -39,7 +39,7 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a
-                href="https://github.com/r0zar/blaze/tree/main/docs"
+                href="https://github.com/r0zar/blaze/blob/main/README.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-yellow-600 via-yellow-700 to-yellow-800 text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2 font-medium"
