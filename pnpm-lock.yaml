@@ -12,8 +12,8 @@ importers:
         specifier: ^7.0.4
         version: 7.0.4
       blaze-sdk:
-        specifier: ^0.5.0
-        version: 0.5.0
+        specifier: ^0.5.1
+        version: 0.5.1
       framer-motion:
         specifier: ^12.4.7
         version: 12.4.7(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -578,8 +578,8 @@ packages:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
 
-  blaze-sdk@0.5.0:
-    resolution: {integrity: sha512-wS3Mnxp+yWzscOIdjKze6gABxAsExTZJF+QESu1nR5wycbQO5T4l1D7dJHX/M1Q0DhMhCz0kv1Mp1bPK0Yej9A==}
+  blaze-sdk@0.5.1:
+    resolution: {integrity: sha512-rwNWw/EOgTPycr973aOReZ/qAs3favxxROqDRioPEULADJwm/ct7DODevBC4p1bC05N5JNNLIhEwtdys4BFO2g==}
     engines: {node: '>=18.0.0'}
 
   brace-expansion@1.1.11:
@@ -2432,7 +2432,7 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
-  blaze-sdk@0.5.0:
+  blaze-sdk@0.5.1:
     dependencies:
       '@stacks/connect': 8.1.3
       '@stacks/network': 7.0.2

@@ -42,6 +42,27 @@ function ActionButtons() {
         setTransactionCounter(prev => prev + 1);
     };
 
+    // Function to handle wallet connection toggle
+    const toggleWalletConnection = async () => {
+        if (isWalletConnected) {
+            // Disconnect wallet
+            blaze.disconnectWallet();
+            setIsWalletConnected(false);
+            setMessage("Wallet disconnected successfully");
+            setTimeout(() => setMessage(null), 5000);
+        } else {
+            // Connect wallet
+            const address = await blaze.connectWallet();
+            if (address) {
+                setIsWalletConnected(true);
+                setMessage("Wallet connected successfully");
+                setTimeout(() => setMessage(null), 5000);
+                // Refresh balances
+                fetch('/api/refresh', { method: 'POST', body: JSON.stringify({ user: address }) });
+            }
+        }
+    };
+
     // Function to settle batch
     const settleBatch = async () => {
         try {
@@ -255,22 +276,31 @@ function ActionButtons() {
                 <h3 className="text-xl font-semibold mb-6">Subnet Actions</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <button
-                        className="backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group"
-                        onClick={() => blaze.connectWallet()}
+                        className={`backdrop-blur-xl p-4 rounded-lg ${isWalletConnected ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' : 'bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800'} hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group`}
+                        onClick={toggleWalletConnection}
                     >
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-100 via-red-100 to-yellow-100/50 dark:from-red-900/70 dark:via-red-900/50 dark:to-yellow-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Wallet className="w-4 h-4 text-red-600 dark:text-red-400" />
+                            <div className={`w-8 h-8 rounded-full ${isWalletConnected ? 'bg-gradient-to-br from-red-100 via-red-100 to-red-100/50 dark:from-red-900/70 dark:via-red-900/50 dark:to-red-900/30' : 'bg-gradient-to-br from-green-100 via-green-100 to-green-100/50 dark:from-green-900/70 dark:via-green-900/50 dark:to-green-900/30'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                                {isWalletConnected ? (
+                                    <LogOut className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                ) : (
+                                    <Wallet className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                )}
                             </div>
-                            <span className="font-semibold">Connect Wallet</span>
+                            <span className="font-semibold">{isWalletConnected ? 'Disconnect Wallet' : 'Connect Wallet'}</span>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Connect your Stacks wallet to get started</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {isWalletConnected
+                                ? `Connected: ${formatAddress(blaze.getWalletAddress())}`
+                                : 'Connect your Stacks wallet to get started'}
+                        </p>
                     </button>
 
                     <button
-                        disabled={false}
-                        className="backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group"
+                        disabled={!isWalletConnected}
+                        className={`backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
                         onClick={() => {
+                            if (!isWalletConnected) return;
                             blaze.transfer({ amount: 1000000, to: 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ' });
                             // Trigger success animation
                             triggerSuccessAnimation();
@@ -286,9 +316,12 @@ function ActionButtons() {
                     </button>
 
                     <button
-                        disabled={false}
-                        className="backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group"
-                        onClick={() => blaze.deposit(10000000)}
+                        disabled={!isWalletConnected}
+                        className={`backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
+                        onClick={() => {
+                            if (!isWalletConnected) return;
+                            blaze.deposit(10000000);
+                        }}
                     >
                         <div className="flex items-center gap-3 mb-2">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-100 via-red-100 to-yellow-100/50 dark:from-red-900/70 dark:via-red-900/50 dark:to-yellow-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -300,9 +333,12 @@ function ActionButtons() {
                     </button>
 
                     <button
-                        disabled={false}
-                        className="backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group"
-                        onClick={() => blaze.withdraw(5000000)}
+                        disabled={!isWalletConnected}
+                        className={`backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
+                        onClick={() => {
+                            if (!isWalletConnected) return;
+                            blaze.withdraw(5000000);
+                        }}
                     >
                         <div className="flex items-center gap-3 mb-2">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-100 via-red-100 to-yellow-100/50 dark:from-red-900/70 dark:via-red-900/50 dark:to-yellow-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -331,12 +367,14 @@ function ActionButtons() {
                         </div>
                     </div>
                     <button
+                        disabled={!isWalletConnected}
                         onClick={async () => {
+                            if (!isWalletConnected) return;
                             await blaze.transfer({ amount: 1000000, to: 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ' });
                             // Trigger success animation
                             triggerSuccessAnimation();
                         }}
-                        className="px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-600 via-yellow-700 to-yellow-800 text-white hover:opacity-90 transition-opacity text-sm font-medium"
+                        className={`px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-600 via-yellow-700 to-yellow-800 text-white hover:opacity-90 transition-opacity text-sm font-medium ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
                     >
                         Create Micro Transaction
                     </button>
