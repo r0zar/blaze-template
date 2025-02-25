@@ -63,6 +63,7 @@ export async function GET(request: Request) {
     // Track if we have the timer lock
     let hasTimerLock = false;
     let timerInterval: NodeJS.Timeout | null = null;
+    let lastDecrementTime = 0; // Track when we last decremented the timer
 
     // Set up batch timer decrementer - only one instance will be able to acquire the lock and decrement
     // This ensures we don't have multiple instances all decrementing the timer
@@ -70,20 +71,22 @@ export async function GET(request: Request) {
         console.log(`Setting up batch timer for server ${serverId}`);
 
         // Try to acquire the timer lock initially
-        hasTimerLock = await kvStore.acquireBatchLock(timerLockId, 5000);
+        // Increase lock duration to 15 seconds to prevent other instances from acquiring too soon
+        hasTimerLock = await kvStore.acquireBatchLock(timerLockId, 15000);
 
         if (hasTimerLock) {
             console.log(`Server ${serverId} acquired timer lock`);
 
             // We got the lock, so we're responsible for decrementing the timer
+            // Use a longer interval (1500ms) to compensate for potential timing issues
             timerInterval = setInterval(async () => {
                 try {
                     // Double check if we still have the lock
                     if (!hasTimerLock) {
                         console.log(`Server ${serverId} lost timer lock, will try to reacquire`);
 
-                        // Try to reacquire the lock
-                        hasTimerLock = await kvStore.acquireBatchLock(timerLockId, 5000);
+                        // Try to reacquire the lock with a longer timeout
+                        hasTimerLock = await kvStore.acquireBatchLock(timerLockId, 15000);
 
                         if (hasTimerLock) {
                             console.log(`Server ${serverId} reacquired timer lock`);
@@ -91,6 +94,16 @@ export async function GET(request: Request) {
                             console.log(`Server ${serverId} failed to reacquire timer lock`);
                             return;
                         }
+                    }
+
+                    // Implement rate limiting - only decrement once per second
+                    const now = Date.now();
+                    const timeSinceLastDecrement = now - lastDecrementTime;
+
+                    // Ensure at least 1000ms has passed since last decrement
+                    if (timeSinceLastDecrement < 1000) {
+                        console.log(`Server ${serverId} skipping decrement - too soon (${timeSinceLastDecrement}ms since last)`);
+                        return;
                     }
 
                     // Check current timer value before decrementing
@@ -103,6 +116,7 @@ export async function GET(request: Request) {
                     if (currentTimer > 0) {
                         // Decrement the timer and get the new value
                         const newTime = await kvStore.decrementBatchTime();
+                        lastDecrementTime = now; // Update last decrement time
                         console.log(`Server ${serverId} decremented timer to ${newTime}`);
 
                         // If timer reached zero, initiate batch processing
@@ -124,7 +138,7 @@ export async function GET(request: Request) {
                     // If we encounter an error, assume we lost the lock and try to reacquire next time
                     hasTimerLock = false;
                 }
-            }, 1000);
+            }, 1500); // Increase to 1.5 seconds to avoid multiple decrements per second
         } else {
             console.log(`Server ${serverId} couldn't acquire timer lock initially, will poll for timer updates only`);
 
@@ -132,12 +146,14 @@ export async function GET(request: Request) {
             // in case the server that has it goes down
             timerInterval = setInterval(async () => {
                 if (!hasTimerLock) {
-                    hasTimerLock = await kvStore.acquireBatchLock(timerLockId, 5000);
+                    // Try to acquire with longer timeout to prevent rapid lock cycling
+                    hasTimerLock = await kvStore.acquireBatchLock(timerLockId, 15000);
                     if (hasTimerLock) {
                         console.log(`Server ${serverId} acquired timer lock in retry interval`);
+                        lastDecrementTime = Date.now(); // Initialize last decrement time
                     }
                 }
-            }, 3000); // Try every 3 seconds
+            }, 5000); // Try less frequently, every 5 seconds
         }
     }
 
@@ -165,16 +181,24 @@ export async function GET(request: Request) {
             // This helps show all wallets that have connected, even if not currently active
             const trackedWallets = await kvStore.getTrackedWallets();
 
+            // Create a new combined list of addresses from both default addresses and tracked wallets
+            const defaultAddresses = ['SP2ZNGJ85ENDY6QRHQ5P2D4FXKGZWCKTB2T0Z55KS', 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ'];
+            const allAddresses = new Set([...defaultAddresses, ...trackedWallets]);
+
             // Add any tracked wallets that aren't already in the balances
             const enhancedBalances = { ...balances };
-            for (const walletAddress of trackedWallets) {
+            for (const walletAddress of allAddresses) {
                 if (!enhancedBalances[walletAddress]) {
                     // If this wallet exists in our tracking but not in current balances,
-                    // add it with a zero balance (or you could query for its actual balance)
+                    // add it with a zero balance
                     enhancedBalances[walletAddress] = 0;
                 }
             }
 
+            // Debug logging to verify balances being sent
+            console.log(`[Server ID: ${serverId}] Sending balances with keys:`, Object.keys(enhancedBalances));
+
+            // Prepare and send the event data to clients
             const eventData = {
                 status,
                 time: new Date().toISOString(),
@@ -210,75 +234,21 @@ export async function GET(request: Request) {
         // Get current timer value for decision making
         const currentBatchTime = await kvStore.getNextBatchTime();
 
-        // Process batch if timer reached zero or queue is full
-        const shouldProcessBatch = (currentBatchTime <= 0 && queue.length > 0) ||
+        // DEBUG: Log the current state when checking batch
+        console.log(`Server ${serverId} checking batch: timer=${currentBatchTime}, queue.length=${queue.length}, isProcessing=${await kvStore.isProcessingBatch()}`);
+
+        // Process batch if timer reached zero OR is close to zero (last 2 seconds) with pending transactions
+        // This helps prevent skipping batches due to timing issues
+        const shouldProcessBatch = (currentBatchTime <= 2 && queue.length > 0) ||
             (queue.length >= maxQueueLength);
 
-        // If timer is at zero, we should reset it even if we don't process a batch
-        const timerAtZero = currentBatchTime <= 0;
+        // If timer is at zero or close to it, we should consider it as "at zero"
+        const timerAtZero = currentBatchTime <= 2;
 
         // Check if we should process a batch and no batch is being processed
         if (shouldProcessBatch && !(await kvStore.isProcessingBatch())) {
-            console.log(`Server ${serverId} attempting to acquire batch lock`);
-
-            // Try to acquire the batch processing lock
-            if (await kvStore.acquireBatchLock(batchLockId, 30000)) {
-                console.log(`Server ${serverId} acquired batch lock`);
-                try {
-                    // Set batch processing flag
-                    await kvStore.setIsProcessingBatch(true);
-
-                    const batchSize = queue.length;
-                    if (batchSize > 0) {
-                        console.log(`Server ${serverId} processing batch of ${batchSize} transactions`);
-
-                        // Mine a block with the transactions in the mempool
-                        await subnet.mineBlock(Math.min(batchSize, maxQueueLength));
-
-                        // Refresh balances to get updated on-chain state
-                        await subnet.refreshBalances();
-
-                        // Get updated data after mining
-                        const updatedQueue = subnet.mempool ? subnet.mempool.getQueue() : [];
-                        const updatedBalances = await subnet.getBalances();
-
-                        if (!isStreamClosed) {
-                            // Send settlement event to client
-                            await sendEvent({
-                                status: subnet.getStatus ? subnet.getStatus() : 'online',
-                                time: new Date().toISOString(),
-                                queue: updatedQueue,
-                                balances: updatedBalances,
-                                nextBatchTime: 30, // Reset to 30 seconds after mining
-                                isProcessingBatch: false,
-                                settlement: {
-                                    batchSize,
-                                    timestamp: Date.now()
-                                },
-                                text: `${batchSize} transactions have been mined in a block and settled on-chain`
-                            });
-                        }
-                    }
-
-                    // Reset the batch timer
-                    await kvStore.resetBatchTimer();
-                    console.log(`Server ${serverId} reset batch timer after processing`);
-                } catch (error) {
-                    console.error(`Error processing batch on server ${serverId}:`, error);
-                    // Even if there was an error, try to reset the timer
-                    if (timerAtZero) {
-                        await kvStore.resetBatchTimer();
-                        console.log(`Server ${serverId} reset batch timer after error`);
-                    }
-                } finally {
-                    // Reset processing flag and release lock
-                    await kvStore.setIsProcessingBatch(false);
-                    await kvStore.releaseBatchLock(batchLockId);
-                    console.log(`Server ${serverId} released batch lock`);
-                }
-            } else {
-                console.log(`Server ${serverId} couldn't acquire batch lock, another instance may be processing`);
-            }
+            // Process the batch, regardless of what the client sees
+            await processBatch(queue, maxQueueLength);
         }
         // If timer is at zero but no transactions to process, still reset the timer
         else if (timerAtZero && !(await kvStore.isProcessingBatch())) {
@@ -310,7 +280,103 @@ export async function GET(request: Request) {
         }
     }
 
-    // Set up batch checking interval
+    // New function to process a batch directly
+    // This is a separate function to allow for direct triggering
+    async function processBatch(queue: any[], maxQueueLength: number) {
+        console.log(`Server ${serverId} attempting to acquire batch lock - queue has ${queue.length} transactions`);
+
+        // Try to acquire the batch processing lock with a longer timeout (30 seconds)
+        // This ensures we have plenty of time to process the batch
+        if (await kvStore.acquireBatchLock('batch', 30000)) {
+            console.log(`Server ${serverId} acquired batch lock`);
+
+            // Double-check if another instance started processing while we were acquiring the lock
+            if (await kvStore.isProcessingBatch()) {
+                console.log(`Server ${serverId} detected another instance is already processing batch, releasing lock`);
+                await kvStore.releaseBatchLock('batch');
+                return;
+            }
+
+            try {
+                // Set batch processing flag immediately to prevent other instances from trying to process
+                await kvStore.setIsProcessingBatch(true);
+                console.log(`Server ${serverId} set batch processing flag to true`);
+
+                // Recheck the queue to ensure we have the latest state
+                const currentQueue = subnet.mempool ? subnet.mempool.getQueue() : [];
+                const batchSize = currentQueue.length;
+
+                if (batchSize > 0) {
+                    console.log(`Server ${serverId} MINING BATCH of ${batchSize} transactions`);
+
+                    try {
+                        // Mine a block with the transactions in the mempool
+                        await subnet.mineBlock(Math.min(batchSize, maxQueueLength));
+                        console.log(`Server ${serverId} successfully mined block with ${batchSize} transactions`);
+
+                        // Refresh balances to get updated on-chain state
+                        await subnet.refreshBalances();
+
+                        // Get updated data after mining
+                        const updatedQueue = subnet.mempool ? subnet.mempool.getQueue() : [];
+                        const updatedBalances = await subnet.getBalances();
+
+                        if (!isStreamClosed) {
+                            // Send settlement event to client with more noticeable indicators
+                            await sendEvent({
+                                status: subnet.getStatus ? subnet.getStatus() : 'online',
+                                time: new Date().toISOString(),
+                                queue: updatedQueue,
+                                balances: updatedBalances,
+                                nextBatchTime: 30, // Reset to 30 seconds after mining
+                                isProcessingBatch: false,
+                                settlement: {
+                                    batchSize,
+                                    timestamp: Date.now(),
+                                    success: true
+                                },
+                                text: `${batchSize} transactions have been mined in a block and settled on-chain`
+                            });
+                        }
+                    } catch (miningError) {
+                        console.error(`Error mining block on server ${serverId}:`, miningError);
+
+                        // Notify clients about the mining error
+                        if (!isStreamClosed) {
+                            await sendEvent({
+                                status: 'error',
+                                time: new Date().toISOString(),
+                                error: 'Failed to mine block',
+                                nextBatchTime: 10, // Set a shorter retry time
+                                isProcessingBatch: false
+                            });
+                        }
+                    }
+                } else {
+                    console.log(`Server ${serverId} found empty queue after acquiring lock, skipping mining`);
+                }
+
+                // Reset the batch timer
+                await kvStore.resetBatchTimer();
+                console.log(`Server ${serverId} reset batch timer after processing`);
+            } catch (error) {
+                console.error(`Error processing batch on server ${serverId}:`, error);
+                // Even if there was an error, reset the timer to try again
+                await kvStore.resetBatchTimer();
+                console.log(`Server ${serverId} reset batch timer after error`);
+            } finally {
+                // Reset processing flag and release lock
+                await kvStore.setIsProcessingBatch(false);
+                console.log(`Server ${serverId} reset processing flag to false`);
+                await kvStore.releaseBatchLock('batch');
+                console.log(`Server ${serverId} released batch lock`);
+            }
+        } else {
+            console.log(`Server ${serverId} couldn't acquire batch lock, another instance may be processing`);
+        }
+    }
+
+    // Make batch check interval more frequent to catch batches that need processing
     const batchCheckInterval = setInterval(async () => {
         if (isStreamClosed) {
             clearInterval(batchCheckInterval);
@@ -322,7 +388,7 @@ export async function GET(request: Request) {
         } catch (error) {
             console.error('Error in batch check interval:', error);
         }
-    }, 1000);
+    }, 500); // Check more frequently (every 500ms) to be more responsive
 
     // Clean up if client disconnects
     request.signal.addEventListener('abort', () => {

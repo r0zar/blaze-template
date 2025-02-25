@@ -46,14 +46,17 @@ export async function decrementBatchTime(): Promise<number> {
 
         // Don't decrement if already zero
         if (currentTime <= 0) {
+            console.log('Timer already at zero, not decrementing');
             return 0;
         }
 
         // Use atomic decrement operation for better concurrency handling
         const newTime = await kv.decr(KV_NEXT_BATCH_TIME);
+        console.log(`Decremented timer: ${currentTime} -> ${newTime}`);
 
         // If the result is negative, reset to 0
         if (newTime < 0) {
+            console.log('Timer went negative, resetting to 0');
             await setNextBatchTime(0);
             return 0;
         }
@@ -61,8 +64,19 @@ export async function decrementBatchTime(): Promise<number> {
         return newTime;
     } catch (error) {
         console.error('Error decrementing batch time in KV:', error);
-        const currentTime = await getNextBatchTime();
-        return Math.max(0, currentTime - 1);
+
+        // Fallback to manual decrement if atomic operation fails
+        try {
+            const currentTime = await getNextBatchTime();
+            const newTime = Math.max(0, currentTime - 1);
+            await setNextBatchTime(newTime);
+            console.log(`Fallback decrement: ${currentTime} -> ${newTime}`);
+            return newTime;
+        } catch (fallbackError) {
+            console.error('Fallback decrement also failed:', fallbackError);
+            const currentTime = await getNextBatchTime();
+            return Math.max(0, currentTime - 1);
+        }
     }
 }
 
@@ -122,21 +136,36 @@ export async function resetBatchTimer(): Promise<void> {
     try {
         console.log(`Resetting batch timer to ${DEFAULT_BATCH_TIME} seconds`);
 
-        // Use explicit set operation instead of setNextBatchTime for more reliable behavior
-        await kv.set(KV_NEXT_BATCH_TIME, DEFAULT_BATCH_TIME);
+        // First check if a batch is being processed to avoid premature reset
+        const isProcessing = await isProcessingBatch();
+        if (isProcessing) {
+            console.log('Batch is currently being processed, delaying timer reset');
+            return;
+        }
 
-        // Update the last batch time
-        await updateLastBatchTime();
+        // Check current queue state to avoid resetting if there are transactions to process
+        // This extra check helps prevent skipping batches of pending transactions
+        const processingState = await kv.get<boolean>(KV_IS_PROCESSING_BATCH);
+        if (processingState === false) {
+            // Use explicit set operation instead of setNextBatchTime for more reliable behavior
+            await kv.set(KV_NEXT_BATCH_TIME, DEFAULT_BATCH_TIME);
 
-        // Verify the timer was reset properly
-        const newTimer = await getNextBatchTime();
-        console.log(`Verified batch timer reset: ${newTimer} seconds`);
+            // Update the last batch time
+            await updateLastBatchTime();
+
+            // Verify the timer was reset properly
+            const newTimer = await getNextBatchTime();
+            console.log(`Verified batch timer reset: ${newTimer} seconds`);
+        } else {
+            console.log('Skipping timer reset due to potential race condition with batch processing');
+        }
     } catch (error) {
         console.error('Error resetting batch timer in KV:', error);
 
         // Fallback direct attempt if the first fails
         try {
             await kv.set(KV_NEXT_BATCH_TIME, DEFAULT_BATCH_TIME);
+            console.log('Used fallback method to reset timer');
         } catch (fallbackError) {
             console.error('Critical error: Failed to reset timer after fallback attempt', fallbackError);
         }

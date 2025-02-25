@@ -36,6 +36,11 @@ function ActionButtons() {
     const [messageTitle, setMessageTitle] = useState<string | null>(null);
     const [pendingBalanceChanges, setPendingBalanceChanges] = useState<{ [address: string]: boolean }>({});
 
+    // Log the initial default balances
+    useEffect(() => {
+        console.log('Initial default balances:', Object.keys(balances));
+    }, []);
+
     // refresh balances on load
     useEffect(() => {
         // Check if wallet is connected on component mount
@@ -143,62 +148,62 @@ function ActionButtons() {
     };
 
     // Function to settle batch
-    const settleBatch = async () => {
-        try {
-            setIsSettling(true);
-            const response = await fetch('/api/settle', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user: blaze.getWalletAddress() })
-            });
+    // const settleBatch = async () => {
+    //     try {
+    //         setIsSettling(true);
+    //         const response = await fetch('/api/settle', {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify({ user: blaze.getWalletAddress() })
+    //         });
 
-            if (!response.ok) {
-                // Handle specific error codes
-                if (response.status === 409) {
-                    setMessageTitle(`Batch Processing In Progress`);
-                    setMessage(`A batch is already being processed`);
-                } else if (response.status === 423) {
-                    setMessageTitle(`Batch Lock Error`);
-                    setMessage(`Could not acquire lock for batch processing`);
-                } else if (response.status === 400) {
-                    setMessageTitle(`No Transactions`);
-                    setMessage(`There are no transactions in the queue to settle`);
-                } else {
-                    setMessageTitle(`Settlement Failed`);
-                    setMessage(`Failed to settle batch: ${response.statusText}`);
-                }
-                setTimeout(() => setMessage(null), 5000);
-                console.error('Failed to settle batch:', response.statusText);
-            } else {
-                const data = await response.json();
-                console.log('Settlement data:', data);
+    //         if (!response.ok) {
+    //             // Handle specific error codes
+    //             if (response.status === 409) {
+    //                 setMessageTitle(`Batch Processing In Progress`);
+    //                 setMessage(`A batch is already being processed`);
+    //             } else if (response.status === 423) {
+    //                 setMessageTitle(`Batch Lock Error`);
+    //                 setMessage(`Could not acquire lock for batch processing`);
+    //             } else if (response.status === 400) {
+    //                 setMessageTitle(`No Transactions`);
+    //                 setMessage(`There are no transactions in the queue to settle`);
+    //             } else {
+    //                 setMessageTitle(`Settlement Failed`);
+    //                 setMessage(`Failed to settle batch: ${response.statusText}`);
+    //             }
+    //             setTimeout(() => setMessage(null), 5000);
+    //             console.error('Failed to settle batch:', response.statusText);
+    //         } else {
+    //             const data = await response.json();
+    //             console.log('Settlement data:', data);
 
-                // Update settlement information
-                setLastSettlement({
-                    batchSize: data.batchSize || 0,
-                    timestamp: Date.now(),
-                    txId: data.txid
-                });
+    //             // Update settlement information
+    //             setLastSettlement({
+    //                 batchSize: data.batchSize || 0,
+    //                 timestamp: Date.now(),
+    //                 txId: data.txid
+    //             });
 
-                // Set message for toast notification
-                setMessageTitle(`Batch settled`);
-                setMessage(data.message || `Transactions have been batched and broadcast on-chain`);
+    //             // Set message for toast notification
+    //             setMessageTitle(`Batch settled`);
+    //             setMessage(data.message || `Transactions have been batched and broadcast on-chain`);
 
-                // Trigger success animation
-                triggerSuccessAnimation();
+    //             // Trigger success animation
+    //             triggerSuccessAnimation();
 
-                // Clear message after 5 seconds
-                setTimeout(() => setMessage(null), 5000);
-            }
-        } catch (error) {
-            console.error('Error settling batch:', error);
-            setMessageTitle(`Settlement Error`);
-            setMessage(`An error occurred while settling the batch`);
-            setTimeout(() => setMessage(null), 5000);
-        } finally {
-            setIsSettling(false);
-        }
-    };
+    //             // Clear message after 5 seconds
+    //             setTimeout(() => setMessage(null), 5000);
+    //         }
+    //     } catch (error) {
+    //         console.error('Error settling batch:', error);
+    //         setMessageTitle(`Settlement Error`);
+    //         setMessage(`An error occurred while settling the batch`);
+    //         setTimeout(() => setMessage(null), 5000);
+    //     } finally {
+    //         setIsSettling(false);
+    //     }
+    // };
 
     // Update component to better handle timer updates
     useEffect(() => {
@@ -301,6 +306,7 @@ function ActionButtons() {
 
                     // Update balances
                     if (data.balances) {
+                        console.log('Received balances from server:', Object.keys(data.balances));
                         setBalances(data.balances);
                     }
 
@@ -357,9 +363,16 @@ function ActionButtons() {
         if (lastSettlement && Date.now() - lastSettlement.timestamp < 2000) {
             return `Mined batch of ${lastSettlement.batchSize} transactions`;
         }
-        // Ensure we're always showing the latest timer value
+
+        // Add timer debugging information
         return `Next batch in ${seconds}s`;
     };
+
+    // Log timer updates with timestamp for debugging
+    useEffect(() => {
+        const now = new Date();
+        console.log(`[${now.toISOString()}] Timer updated to: ${nextBatchTime}s`);
+    }, [nextBatchTime]);
 
     // Helper function to get the pill color based on state
     const getPillClasses = () => {
@@ -674,7 +687,7 @@ function ActionButtons() {
                         }}
                         className={`px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-600 via-yellow-700 to-yellow-800 text-white hover:opacity-90 transition-opacity text-sm font-medium flex items-center gap-2 ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
                     >
-                        <span>Create Micro Transaction</span>
+                        <span>Send Micro Transaction</span>
                         {!selectedTargetAddress && isWalletConnected && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 animate-pulse">
                                 Random
