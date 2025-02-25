@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "link-sdk": "node scripts/link-sdk.js",
+    "unlink-sdk": "node scripts/unlink-sdk.js",
+    "install-hooks": "node scripts/install-hooks.js",
+    "postinstall": "node -e \"try { require('fs').accessSync('./scripts/install-hooks.js', require('fs').constants.F_OK); require('./scripts/install-hooks.js'); } catch (e) {}\""
   },
   "dependencies": {
     "blaze-sdk": "0.5.6",

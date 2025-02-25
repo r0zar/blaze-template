@@ -115,7 +115,7 @@ function ActionButtons() {
                 setLastSettlement({
                     batchSize: data.batchSize,
                     timestamp: data.timestamp,
-                    txId: data.txid || '0x123456789abcdef' // Mock txId for demo purposes
+                    txId: data.txid
                 });
                 // Set message for toast notification
                 setMessageTitle(`Batch mined`);
