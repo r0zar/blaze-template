@@ -19,7 +19,7 @@ function generateRandomAmount() {
 // List of fixed addresses to ensure some transactions between known addresses
 const FIXED_ADDRESSES = [
     'SP2ZNGJ85ENDY6QRHQ5P2D4FXKGZWCKTB2T0Z55KS',
-    'SP2ZNGJ85ENDY6QRHQ5P2D4FXKGZWCKTB2T0ZEZPJ'
+    'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ'
 ];
 
 export async function GET() {

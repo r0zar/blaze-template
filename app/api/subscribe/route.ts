@@ -23,35 +23,54 @@ export async function GET(request: Request) {
         )
     }
 
+    // Refresh balances initially to ensure we have the latest on-chain state
+    try {
+        await subnet.refreshBalances();
+        console.log('Initial balance refresh completed');
+    } catch (e) {
+        console.error('Error during initial balance refresh:', e);
+    }
+
     // Example: Send events every second
     const interval = setInterval(async () => {
         try {
-            const status = subnet.getStatus();
-            const balances = subnet.getBalances();
+            const status = subnet.getStatus ? subnet.getStatus() : 'online';
+            const balances = await subnet.getBalances();
+            const queue = subnet.mempool ? subnet.mempool.getQueue() : [];
 
             const eventData = {
                 status,
                 time: new Date().toISOString(),
-                queue: subnet.queue,
+                queue,
                 balances
             };
 
             await sendEvent(eventData);
 
-            // if queue length is longer than 20, settle transactions
+            // if queue length is longer than 20, mine a block
             const maxQueueLength = 20;
-            if (subnet.queue.length >= maxQueueLength) {
-                const batchSize = subnet.queue.length;
-                await subnet.settleTransactions(maxQueueLength);
+            if (queue.length >= maxQueueLength) {
+                const batchSize = queue.length;
+                // Mine a block with the transactions in the mempool
+                await subnet.mineBlock(maxQueueLength);
+
+                // Explicitly refresh balances to get updated on-chain state
+                await subnet.refreshBalances();
+
+                // Get updated data after mining
+                const updatedQueue = subnet.mempool ? subnet.mempool.getQueue() : [];
+                const updatedBalances = await subnet.getBalances();
+
                 await sendEvent({
-                    ...eventData,
-                    queue: subnet.queue, // Send updated queue
-                    balances: subnet.getBalances(), // Send updated balances
+                    status,
+                    time: new Date().toISOString(),
+                    queue: updatedQueue,
+                    balances: updatedBalances,
                     settlement: {
                         batchSize,
                         timestamp: Date.now()
                     },
-                    text: `${batchSize} transactions have been settled on-chain`
+                    text: `${batchSize} transactions have been mined in a block and settled on-chain`
                 });
             }
         } catch (e) {

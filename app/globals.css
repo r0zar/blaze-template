@@ -5,11 +5,22 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* New theme colors */
+  --dark-red: #8B0000;
+  --medium-red: #B22222;
+  --light-red: #CD5C5C;
+  --dark-brown: #3E2723;
+  --medium-brown: #5D4037;
+  --light-brown: #8D6E63;
+  --dark-gold: #B8860B;
+  --medium-gold: #DAA520;
+  --light-gold: #F7DC6F;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #121010;
     --foreground: #ededed;
   }
 }
@@ -21,10 +32,10 @@ body {
 }
 
 .mesh-gradient {
-  background: radial-gradient(at 0% 0%, #ff4b4b 0%, transparent 50%),
-              radial-gradient(at 100% 0%, #7928ca 0%, transparent 50%),
-              radial-gradient(at 100% 100%, #ff0080 0%, transparent 50%),
-              radial-gradient(at 0% 100%, #ff4d4d 0%, transparent 50%);
+  background: radial-gradient(at 0% 0%, var(--dark-red) 0%, transparent 50%),
+              radial-gradient(at 100% 0%, var(--medium-brown) 0%, transparent 50%),
+              radial-gradient(at 100% 100%, var(--medium-gold) 0%, transparent 50%),
+              radial-gradient(at 0% 100%, var(--medium-red) 0%, transparent 50%);
   filter: blur(100px);
   animation: meshMove 20s ease infinite;
 }

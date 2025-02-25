@@ -6,7 +6,7 @@ export async function POST(request: Request) {
         console.log('Received transaction request:', txRequest);
 
         subnet.processTxRequest(txRequest);
-        const queueLength = subnet.queue.length;
+        const queueLength = subnet.mempool ? subnet.mempool.getQueue().length : 0;
         console.log('Queue length after processing:', queueLength);
 
         const response = {
