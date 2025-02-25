@@ -11,8 +11,11 @@ import {
     Loader2,
     PlusCircle,
     LogOut,
+    ExternalLink,
 } from "lucide-react";
 import FloatingElements from "./FloatingElements";
+import PendingBalanceAnimation from "./PendingBalanceAnimation";
+import ExplorerLink from "./ExplorerLink";
 
 function ActionButtons() {
 
@@ -22,9 +25,12 @@ function ActionButtons() {
     const [isLoading, setIsLoading] = useState(true);
     const [nextBatchTime, setNextBatchTime] = useState<number>(30); // 30 second batches
     const [isSettling, setIsSettling] = useState(false);
-    const [lastSettlement, setLastSettlement] = useState<{ batchSize: number; timestamp: number } | null>(null);
+    const [lastSettlement, setLastSettlement] = useState<{ batchSize: number; timestamp: number; txId?: string } | null>(null);
     const [transactionCounter, setTransactionCounter] = useState(0);
     const [isWalletConnected, setIsWalletConnected] = useState(false);
+    const [selectedTargetAddress, setSelectedTargetAddress] = useState<string | null>(null);
+    const [messageTitle, setMessageTitle] = useState<string | null>(null);
+    const [pendingBalanceChanges, setPendingBalanceChanges] = useState<{ [address: string]: boolean }>({});
 
     // refresh balances on load
     useEffect(() => {
@@ -33,13 +39,36 @@ function ActionButtons() {
         setIsWalletConnected(walletConnected);
 
         if (walletConnected) {
-            fetch('/api/refresh', { method: 'POST', body: JSON.stringify({ user: blaze.getWalletAddress() }) });
+            fetch('/api/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user: blaze.getWalletAddress() })
+            });
         }
-    }, []);
+    }, [blaze.signer]);
 
     // Function to trigger transaction success animation
     const triggerSuccessAnimation = () => {
         setTransactionCounter(prev => prev + 1);
+    };
+
+    // Function to handle pending balance state
+    const handlePendingBalanceChange = (address: string) => {
+        setPendingBalanceChanges(prev => ({
+            ...prev,
+            [address]: true
+        }));
+
+        // After 60 seconds, the PendingBalanceAnimation component will call onComplete
+    };
+
+    // Function to clear pending balance state
+    const clearPendingBalanceChange = (address: string) => {
+        setPendingBalanceChanges(prev => {
+            const newState = { ...prev };
+            delete newState[address];
+            return newState;
+        });
     };
 
     // Function to handle wallet connection toggle
@@ -49,67 +78,23 @@ function ActionButtons() {
             blaze.disconnectWallet();
             setIsWalletConnected(false);
             setMessage("Wallet disconnected successfully");
+            setMessageTitle("Wallet disconnected");
             setTimeout(() => setMessage(null), 5000);
         } else {
-            try {
-                // Connect wallet
-                const address = await blaze.connectWallet();
-                if (address) {
-                    setIsWalletConnected(true);
-                    setMessage("Wallet connected successfully");
-                    setTimeout(() => setMessage(null), 5000);
-                    // Refresh balances
-                    fetch('/api/refresh', { method: 'POST', body: JSON.stringify({ user: address }) });
-                }
-            } catch (error) {
-                console.error('Error connecting wallet:', error);
-                setMessage("Failed to connect wallet. Please try again.");
+            // Connect wallet
+            const address = await blaze.connectWallet();
+            if (address) {
+                setIsWalletConnected(true);
+                setMessage("Wallet connected successfully");
+                setMessageTitle("Wallet connected");
                 setTimeout(() => setMessage(null), 5000);
+                // Refresh balances
+                fetch('/api/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: address })
+                });
             }
-        }
-    };
-
-    // Function to safely handle transactions with error handling
-    const safeTransaction = async (txType: 'transfer' | 'deposit' | 'withdraw', params: any) => {
-        if (!isWalletConnected) return;
-
-        try {
-            let result;
-
-            if (txType === 'transfer') {
-                result = await blaze.transfer(params);
-            } else if (txType === 'deposit') {
-                result = await blaze.deposit(params);
-            } else if (txType === 'withdraw') {
-                result = await blaze.withdraw(params);
-            }
-
-            // Trigger success animation
-            triggerSuccessAnimation();
-
-            // Show success message
-            const actionName = txType.charAt(0).toUpperCase() + txType.slice(1);
-            setMessage(`${actionName} successful`);
-            setTimeout(() => setMessage(null), 5000);
-
-            return result;
-        } catch (error: any) {
-            console.error(`${txType} error:`, error);
-
-            // Show error message
-            let errorMessage = `${txType.charAt(0).toUpperCase() + txType.slice(1)} failed. `;
-
-            // Check for specific error types
-            if (error.message && error.message.includes('Domain must be a tuple')) {
-                errorMessage += "Wallet connection issue. Please try reconnecting your wallet.";
-            } else {
-                errorMessage += "Please try again.";
-            }
-
-            setMessage(errorMessage);
-            setTimeout(() => setMessage(null), 5000);
-
-            throw error;
         }
     };
 
@@ -117,16 +102,23 @@ function ActionButtons() {
     const settleBatch = async () => {
         try {
             setIsSettling(true);
-            const response = await fetch('/api/settle', { method: 'POST' });
-            const result = await response.json();
-            if (!result.success) {
-                console.error('Failed to settle batch:', result.message);
+            const response = await fetch('/api/settle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user: blaze.getWalletAddress() })
+            });
+            if (!response.ok) {
+                console.error('Failed to settle batch:', response.statusText);
             } else {
+                const data = await response.json();
+                console.log('Settlement data:', data);
                 setLastSettlement({
-                    batchSize: result.batchSize,
-                    timestamp: result.timestamp
+                    batchSize: data.batchSize,
+                    timestamp: data.timestamp,
+                    txId: data.txid || '0x123456789abcdef' // Mock txId for demo purposes
                 });
                 // Set message for toast notification
+                setMessageTitle(`Batch mined`);
                 setMessage(`All transactions have been batched and broadcast on-chain`);
                 // Trigger success animation
                 triggerSuccessAnimation();
@@ -180,6 +172,7 @@ function ActionButtons() {
                     // Handle notification message
                     if (message.text) {
                         setMessage(message.text);
+                        setMessageTitle("Transaction submitted");
                         setTimeout(() => setMessage(null), 5000);
                     }
                 }
@@ -194,7 +187,6 @@ function ActionButtons() {
                 if (prev <= 0) {
                     // Trigger batch settlement
                     settleBatch();
-                    fetch('/api/refresh', { method: 'POST' });
                     return 30; // Reset to 30 seconds
                 }
                 return prev - 1;
@@ -257,10 +249,81 @@ function ActionButtons() {
         return () => clearInterval(interval);
     }, []);
 
+    // Function to handle selecting a target address
+    const selectTargetAddress = (address: string) => {
+        // Don't select your own address as target
+        if (isWalletConnected && address === blaze.getWalletAddress()) {
+            return;
+        }
+
+        setSelectedTargetAddress(address);
+        setMessage(`Selected ${formatAddress(address)} as transfer target`);
+        setMessageTitle(`Transfer target updated`);
+        setTimeout(() => setMessage(null), 3000);
+    };
+
+    // Helper function to get the balance card classes based on selection state
+    const getBalanceCardClasses = (address: string) => {
+        const baseClasses = "p-4 rounded-lg bg-white dark:bg-black/40 border transition-colors cursor-pointer";
+
+        // If this is the user's own address, make it non-selectable but visually distinct
+        if (isWalletConnected && address === blaze.getWalletAddress()) {
+            return `${baseClasses} border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/30`;
+        }
+
+        // If this address is selected, highlight it
+        if (selectedTargetAddress === address) {
+            return `${baseClasses} border-yellow-500 dark:border-yellow-500 ring-2 ring-yellow-500/30`;
+        }
+
+        // Default state
+        return `${baseClasses} border-gray-100 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500`;
+    };
+
+    // Helper function to get a random target address that is not the signer's address
+    const getRandomTargetAddress = () => {
+        // Get all addresses except the signer's address
+        const availableAddresses = Object.keys(balances).filter(address =>
+            !isWalletConnected || address !== blaze.getWalletAddress()
+        );
+
+        // If no other addresses are available, use a default address
+        if (availableAddresses.length === 0) {
+            return 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ';
+        }
+
+        // Pick a random address from the available addresses
+        const randomIndex = Math.floor(Math.random() * availableAddresses.length);
+        const randomAddress = availableAddresses[randomIndex];
+
+        // Show a message about the randomly selected address
+        setMessageTitle("Random target selected");
+        setMessage(`Randomly selected ${formatAddress(randomAddress)} as transfer target`);
+        setTimeout(() => setMessage(null), 3000);
+
+        return randomAddress;
+    };
+
+    // Function to handle deposit with pending state
+    const handleDeposit = () => {
+        if (isWalletConnected) {
+            const address = blaze.getWalletAddress();
+            blaze.deposit(10000000);
+            handlePendingBalanceChange(address);
+        }
+    };
+
+    // Function to handle withdraw with pending state
+    const handleWithdraw = () => {
+        if (isWalletConnected) {
+            const address = blaze.getWalletAddress();
+            blaze.withdraw(5000000);
+            handlePendingBalanceChange(address);
+        }
+    };
+
     return (
         <div className="max-w-screen-2xl mx-auto">
-            {/* Floating Elements with transaction success state */}
-            <FloatingElements transactionSuccess={transactionCounter > 0} key={transactionCounter} />
 
             {/* Toast Message */}
             <AnimatePresence>
@@ -269,17 +332,17 @@ function ActionButtons() {
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 min-w-[300px] max-w-[90vw]"
+                        className="fixed top-2 right-2 sm:top-10 sm:right-16 z-50 min-w-[300px] max-w-[90vw]"
                     >
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-black/5 backdrop-blur-md rounded-xl" />
+                        <div className="relative backdrop-blur-xl">
+                            <div className="absolute inset-0 bg-black/5  rounded-xl" />
                             <div className="p-4 bg-gradient-to-r from-yellow-50/80 via-yellow-50/80 to-yellow-50/80 dark:from-yellow-900/30 dark:via-yellow-900/20 dark:to-yellow-900/10 rounded-xl text-sm shadow-lg border border-yellow-200 dark:border-yellow-800 relative text-center">
                                 <div className="flex items-center justify-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-100 via-yellow-100 to-yellow-100/50 dark:from-yellow-900/70 dark:via-yellow-900/50 dark:to-yellow-900/30 flex items-center justify-center">
                                         <ArrowRightLeft className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
                                     </div>
                                     <div>
-                                        <div className="font-medium text-yellow-900 dark:text-yellow-100">Batch Settled</div>
+                                        <div className="font-medium text-yellow-900 dark:text-yellow-100 text-left">{messageTitle}</div>
                                         <div className="text-yellow-600/80 dark:text-yellow-300/80">{message}</div>
                                     </div>
                                 </div>
@@ -293,28 +356,61 @@ function ActionButtons() {
             <div className="mb-12 p-6 rounded-xl bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-800 backdrop-blur-sm relative z-10">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-semibold">Subnet Balances</h2>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Live Updates • {txRequests.length} Pending Tx{txRequests.length !== 1 ? 's' : ''}
+                    <div className="flex items-center gap-3">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Live Updates • {txRequests.length} Pending Tx{txRequests.length !== 1 ? 's' : ''}
+                        </div>
+                        <ExplorerLink
+                            variant="badge"
+                            size="sm"
+                            label="View Contract"
+                        />
                     </div>
                 </div>
-                <div className="backdrop-blur-md grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {Object.entries(balances).map(([address, balance]) => (
                         <div
                             key={address}
-                            className="p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-100 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-colors"
+                            className={getBalanceCardClasses(address)}
+                            onClick={() => selectTargetAddress(address)}
+                            title={isWalletConnected && address === blaze.getWalletAddress() ?
+                                "This is your subnet address and its balances" :
+                                `Click to set ${formatAddress(address)} as transfer target`}
                         >
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-100 via-red-100 to-yellow-100/50 dark:from-red-900/70 dark:via-red-900/50 dark:to-yellow-900/30 flex items-center justify-center">
                                     <Wallet className="w-4 h-4 text-red-600 dark:text-red-400" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Wallet Address</div>
-                                    <div className="text-sm font-mono truncate" title={address}>{formatAddress(address)}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center">
+                                        Wallet Address {isWalletConnected && address === blaze.getWalletAddress()}
+                                    </div>
+                                    <div className="text-xs font-mono truncate" title={address}>
+                                        {formatAddress(address)}
+                                        {selectedTargetAddress === address && (
+                                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                                Selected
+                                            </span>
+                                        )}
+                                        {isWalletConnected && address === blaze.getWalletAddress() && (
+                                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                My Wallet
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex items-baseline justify-between">
                                 <div className="text-xs text-gray-500 dark:text-gray-400">Balance</div>
-                                <div className="text-xl font-semibold">{Number(balance as number / 10 ** 6).toLocaleString()} WELSH</div>
+                                <div className="text-xl font-semibold flex items-center">
+                                    {Number(balance as number / 10 ** 6).toLocaleString()} WELSH
+                                    {pendingBalanceChanges[address] && (
+                                        <PendingBalanceAnimation
+                                            isActive={true}
+                                            onComplete={() => clearPendingBalanceChange(address)}
+                                        />
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ))}
@@ -326,7 +422,7 @@ function ActionButtons() {
                 <h3 className="text-xl font-semibold mb-6">Subnet Actions</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <button
-                        className={`backdrop-blur-xl p-4 rounded-lg ${isWalletConnected ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' : 'bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800'} hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group`}
+                        className={`backdrop-blur-lg p-4 rounded-lg ${isWalletConnected ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' : 'bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800'} hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group`}
                         onClick={toggleWalletConnection}
                     >
                         <div className="flex items-center gap-3 mb-2">
@@ -339,7 +435,7 @@ function ActionButtons() {
                             </div>
                             <span className="font-semibold">{isWalletConnected ? 'Disconnect Wallet' : 'Connect Wallet'}</span>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                             {isWalletConnected
                                 ? `Connected: ${formatAddress(blaze.getWalletAddress())}`
                                 : 'Connect your Stacks wallet to get started'}
@@ -347,15 +443,12 @@ function ActionButtons() {
                     </button>
 
                     <button
-                        disabled={!isWalletConnected}
-                        className={`backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
-                        onClick={async () => {
-                            if (!isWalletConnected) return;
-                            try {
-                                await safeTransaction('transfer', { amount: 1000000, to: 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ' });
-                            } catch (error) {
-                                // Error is already handled in safeTransaction
-                            }
+                        className={`backdrop-blur-lg p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group`}
+                        onClick={() => {
+                            const targetAddress = selectedTargetAddress || getRandomTargetAddress();
+                            blaze.transfer({ amount: 1000000, to: targetAddress });
+                            // Trigger success animation
+                            triggerSuccessAnimation();
                         }}
                     >
                         <div className="flex items-center gap-3 mb-2">
@@ -363,21 +456,22 @@ function ActionButtons() {
                                 <ArrowRightLeft className="w-4 h-4 text-red-600 dark:text-red-400" />
                             </div>
                             <span className="font-semibold">Transfer</span>
+                            {!selectedTargetAddress && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 animate-pulse">
+                                    Random
+                                </span>
+                            )}
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Send WELSH tokens to another address</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {selectedTargetAddress ?
+                                `Send WELSH to ${formatAddress(selectedTargetAddress)}` :
+                                'Send WELSH tokens to a random address'}
+                        </p>
                     </button>
 
                     <button
-                        disabled={!isWalletConnected}
-                        className={`backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
-                        onClick={async () => {
-                            if (!isWalletConnected) return;
-                            try {
-                                await safeTransaction('deposit', 10000000);
-                            } catch (error) {
-                                // Error is already handled in safeTransaction
-                            }
-                        }}
+                        className={`backdrop-blur-lg p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group`}
+                        onClick={handleDeposit}
                     >
                         <div className="flex items-center gap-3 mb-2">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-100 via-red-100 to-yellow-100/50 dark:from-red-900/70 dark:via-red-900/50 dark:to-yellow-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -385,20 +479,12 @@ function ActionButtons() {
                             </div>
                             <span className="font-semibold">Deposit</span>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Deposit tokens into the subnet</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Deposit tokens into the subnet</p>
                     </button>
 
                     <button
-                        disabled={!isWalletConnected}
-                        className={`backdrop-blur-xl p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
-                        onClick={async () => {
-                            if (!isWalletConnected) return;
-                            try {
-                                await safeTransaction('withdraw', 5000000);
-                            } catch (error) {
-                                // Error is already handled in safeTransaction
-                            }
-                        }}
+                        className={`backdrop-blur-lg p-4 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all hover:shadow-lg group`}
+                        onClick={handleWithdraw}
                     >
                         <div className="flex items-center gap-3 mb-2">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-100 via-red-100 to-yellow-100/50 dark:from-red-900/70 dark:via-red-900/50 dark:to-yellow-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -419,26 +505,38 @@ function ActionButtons() {
                         <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getPillClasses()}`}>
                             <div className={`w-2 h-2 rounded-full ${getIndicatorClasses()}`} />
                             <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-                                {isSettling ? 'Settling...' :
+                                {isSettling ? 'Mining transaction batch...' :
                                     lastSettlement && Date.now() - lastSettlement.timestamp < 2000 ?
-                                        `Settled ${lastSettlement.batchSize} transactions` :
+                                        `Mined batch of ${lastSettlement.batchSize} transactions` :
                                         `Next batch in ${nextBatchTime}s`}
                             </span>
                         </div>
+                        {lastSettlement && lastSettlement.txId && Date.now() - lastSettlement.timestamp < 10000 && (
+                            <ExplorerLink
+                                txId={lastSettlement.txId}
+                                variant="badge"
+                                size="sm"
+                                label="View Batch"
+                            />
+                        )}
                     </div>
                     <button
                         disabled={!isWalletConnected}
                         onClick={async () => {
                             if (!isWalletConnected) return;
-                            try {
-                                await safeTransaction('transfer', { amount: 1000000, to: 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ' });
-                            } catch (error) {
-                                // Error is already handled in safeTransaction
-                            }
+                            const targetAddress = selectedTargetAddress || getRandomTargetAddress();
+                            await blaze.transfer({ amount: 1000000, to: targetAddress });
+                            // Trigger success animation
+                            triggerSuccessAnimation();
                         }}
-                        className={`px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-600 via-yellow-700 to-yellow-800 text-white hover:opacity-90 transition-opacity text-sm font-medium ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
+                        className={`px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-600 via-yellow-700 to-yellow-800 text-white hover:opacity-90 transition-opacity text-sm font-medium flex items-center gap-2 ${!isWalletConnected && 'opacity-50 cursor-not-allowed'}`}
                     >
-                        Create Micro Transaction
+                        <span>Create Micro Transaction</span>
+                        {!selectedTargetAddress && isWalletConnected && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 animate-pulse">
+                                Random
+                            </span>
+                        )}
                     </button>
                 </div>
 
@@ -457,7 +555,7 @@ function ActionButtons() {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
                                     transition={{ duration: 0.2 }}
-                                    className="backdrop-blur-xl p-3 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-colors"
+                                    className="backdrop-blur-lg p-3 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-gray-800 hover:border-yellow-500 dark:hover:border-yellow-500 transition-colors"
                                 >
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-100 to-yellow-100 dark:from-red-900/50 dark:to-yellow-900/50 flex items-center justify-center">
@@ -493,11 +591,21 @@ function ActionButtons() {
                                             </span>
                                         </div>
                                     </div>
+                                    <div className="mt-2 flex justify-end">
+                                        <ExplorerLink
+                                            variant="text"
+                                            size="sm"
+                                            label="View on Explorer"
+                                            txId={(tx as any).txId}
+                                            showIcon={false}
+                                            className="text-[10px] text-gray-500 hover:text-yellow-600"
+                                        />
+                                    </div>
                                 </motion.div>
                             ))}
                         </AnimatePresence>
                     ) : (
-                        <div className="col-span-full p-6 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-800">
+                        <div className="backdrop-blur-lg col-span-full p-6 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-800">
                             <div className="mb-2">
                                 <PlusCircle className="w-8 h-8 mx-auto opacity-50" />
                             </div>

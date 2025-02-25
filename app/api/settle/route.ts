@@ -13,14 +13,15 @@ export async function POST() {
 
         if (batchSize > 0) {
             // Force mine a block with the current mempool transactions
-            await subnet.mineBlock();
+            const result = await subnet.mineBlock();
 
             return NextResponse.json({
                 success: true,
                 message: 'Block mined successfully',
                 batchSize,
                 balances: await subnet.getBalances(), // Include updated balances in response
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                ...result
             });
         } else {
             console.log('No transactions to mine');

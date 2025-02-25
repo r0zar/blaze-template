@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import FloatingElements from "../components/FloatingElements";
+import FloatingElements from "@/components/FloatingElements";
+import NavButton from "@/components/NavButton";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,9 +42,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-gradient-to-b from-background to-background/90 relative overflow-x-hidden`}
       >
         <div className="mesh-gradient fixed inset-0 -z-10 opacity-10" />
-
-        {/* Import the client component for floating elements */}
+        {/* Floating Elements with transaction success state */}
         <FloatingElements />
+
+        {/* Navigation Menu */}
+        <NavButton />
 
         <div className="relative z-0">
           {children}

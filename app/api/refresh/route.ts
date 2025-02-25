@@ -1,18 +1,13 @@
-// refresh balances
+import { NextRequest, NextResponse } from 'next/server';
 import { subnet } from '../subnet';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        if (!body.user) {
-            await subnet.refreshBalances();
-            return new Response(JSON.stringify({ success: true }));
-        }
-        const user = body.user;
-        await subnet.refreshBalances(user);
-        return new Response(JSON.stringify({ success: true }));
+        await subnet.refreshBalances(body?.user);
+        return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error refreshing balances:', error);
-        return new Response(JSON.stringify({ success: false, error: 'Error refreshing balances' }), { status: 500 });
+        console.error('Refresh bugging out:', error);
+        return NextResponse.json({ success: false });
     }
 }

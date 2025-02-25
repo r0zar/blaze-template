@@ -1,6 +1,8 @@
 import { Footer } from '@/components/Footer';
 import ActionButtons from "@/components/ActionButton";
-import { BookOpen, Github, CircleDollarSign, Code, Flame } from "lucide-react";
+import { BookOpen, Github, CircleDollarSign, Code, Flame, ExternalLink } from "lucide-react";
+import ExplorerLink from '@/components/ExplorerLink';
+import Link from 'next/link';
 
 export default function Home() {
   return (
@@ -78,7 +80,7 @@ export default function Home() {
             ].map((feature, i) => (
               <div
                 key={i}
-                className="backdrop-blur-2xl p-6 rounded-2xl bg-white/50 dark:bg-black/20 border border-[#CD5C5C] dark:border-[#8D6E63]"
+                className="z-10 backdrop-blur-lg p-6 rounded-2xl bg-white/50 dark:bg-black/20 border border-[#CD5C5C] dark:border-[#8D6E63]"
               >
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-100 to-[#F7DC6F]/50 dark:from-red-900/50 dark:to-[#B8860B]/50 flex items-center justify-center mb-4">
                   <feature.icon className="w-6 h-6 text-[#8B0000] dark:text-[#DAA520]" />
@@ -94,6 +96,34 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 py-16 relative z-10">
         <div className="max-w-6xl mx-auto">
+          {/* Explorer Card */}
+          <div className="mb-12 p-6 rounded-xl bg-white/50 dark:bg-black/50 border border-yellow-200 dark:border-yellow-800 backdrop-blur-sm relative z-10">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold mb-2">Blaze Smart Contract</h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-2">
+                  View the Blaze subnet contract on the Stacks blockchain explorer.
+                </p>
+                <div className="font-mono text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 px-3 py-2 rounded-lg mb-4 md:mb-0">
+                  SP2ZNGJ85ENDY6QRHQ5P2D4FXKGZWCKTB2T0Z55KS.blaze-welsh-v0
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <ExplorerLink
+                  variant="button"
+                  size="lg"
+                  label="View on Stacks Explorer"
+                />
+                <Link
+                  href="/explorer"
+                  className="px-4 py-2 rounded-lg border border-yellow-500 dark:border-yellow-500 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors flex items-center justify-center gap-2 font-medium text-base"
+                >
+                  View Transaction History
+                </Link>
+              </div>
+            </div>
+          </div>
+
           <div className="mb-6">
             <h2 className="text-3xl font-bold mb-2">Try It Now</h2>
             <p className="text-base text-gray-600 dark:text-gray-400">

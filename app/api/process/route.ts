@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import { subnet } from '../subnet';
 
 export async function POST(request: Request) {
@@ -17,12 +18,12 @@ export async function POST(request: Request) {
         };
         console.log('Sending response:', response);
 
-        return new Response(JSON.stringify(response))
+        return NextResponse.json(response)
     } catch (error) {
         console.error('Error processing request:', error);
-        return new Response(JSON.stringify({
+        return NextResponse.json({
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
-        }), { status: 500 })
+        }, { status: 500 })
     }
 }

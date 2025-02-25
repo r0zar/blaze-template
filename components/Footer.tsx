@@ -1,4 +1,5 @@
-import { Flame, BookOpen, Github, Twitter } from "lucide-react";
+import { Flame, BookOpen, Github, Twitter, ExternalLink } from "lucide-react";
+import ExplorerLink from "./ExplorerLink";
 
 export function Footer() {
     return (
@@ -12,6 +13,12 @@ export function Footer() {
                         </span>
                     </div>
                     <div className="flex gap-8 text-sm text-gray-600 dark:text-gray-400">
+                        <ExplorerLink
+                            label="View Contract"
+                            variant="text"
+                            size="sm"
+                            className="hover:text-[#B22222] dark:hover:text-[#DAA520] transition-colors"
+                        />
                         <a
                             href="https://github.com/r0zar/blaze/blob/main/README.md"
                             target="_blank"
