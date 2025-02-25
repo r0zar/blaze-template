@@ -39,10 +39,20 @@ function ActionButtons() {
         setIsWalletConnected(walletConnected);
 
         if (walletConnected) {
+            const address = blaze.getWalletAddress();
+
+            // Initialize balance for the wallet if it doesn't exist
+            setBalances((prevBalances: Record<string, number>) => {
+                if (!prevBalances[address]) {
+                    return { ...prevBalances, [address]: 0 };
+                }
+                return prevBalances;
+            });
+
             fetch('/api/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user: blaze.getWalletAddress() })
+                body: JSON.stringify({ user: address })
             });
         }
     }, [blaze.signer]);
@@ -88,6 +98,15 @@ function ActionButtons() {
                 setMessage("Wallet connected successfully");
                 setMessageTitle("Wallet connected");
                 setTimeout(() => setMessage(null), 5000);
+
+                // Initialize balance for the new wallet if it doesn't exist
+                setBalances((prevBalances: Record<string, number>) => {
+                    if (!prevBalances[address]) {
+                        return { ...prevBalances, [address]: 0 };
+                    }
+                    return prevBalances;
+                });
+
                 // Refresh balances
                 fetch('/api/refresh', {
                     method: 'POST',
