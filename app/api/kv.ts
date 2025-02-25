@@ -272,7 +272,7 @@ export async function getWalletLastSeen(walletAddress: string): Promise<number |
  * 
  * @param maxAgeMs Maximum age in milliseconds before a wallet is considered inactive
  */
-export async function cleanupInactiveWallets(maxAgeMs: number = 24 * 60 * 60 * 1000): Promise<void> {
+export async function cleanupInactiveWallets(maxAgeMs: number = 7 * 24 * 60 * 60 * 1000): Promise<void> {
     try {
         const now = Date.now();
         const wallets = await getTrackedWallets();
