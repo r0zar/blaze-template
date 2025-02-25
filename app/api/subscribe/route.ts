@@ -78,7 +78,7 @@ export async function GET(request: Request) {
             // We got the lock, so we're responsible for decrementing the timer
             timerInterval = setInterval(async () => {
                 try {
-                    // Check if we still have the lock
+                    // Double check if we still have the lock
                     if (!hasTimerLock) {
                         console.log(`Server ${serverId} lost timer lock, will try to reacquire`);
 
@@ -93,14 +93,29 @@ export async function GET(request: Request) {
                         }
                     }
 
-                    // Decrement the timer and get the new value
-                    const newTime = await kvStore.decrementBatchTime();
-                    console.log(`Server ${serverId} decremented timer to ${newTime}`);
+                    // Check current timer value before decrementing
+                    const currentTimer = await kvStore.getNextBatchTime();
 
-                    // If timer reached zero and no batch is being processed, initiate batch processing
-                    if (newTime <= 0 && !(await kvStore.isProcessingBatch())) {
-                        console.log(`Timer reached zero, server ${serverId} initiating batch processing`);
-                        // Try to start batch processing
+                    // Log the timer value we're working with
+                    console.log(`Server ${serverId} checking timer: current value = ${currentTimer}`);
+
+                    // Only decrement if positive
+                    if (currentTimer > 0) {
+                        // Decrement the timer and get the new value
+                        const newTime = await kvStore.decrementBatchTime();
+                        console.log(`Server ${serverId} decremented timer to ${newTime}`);
+
+                        // If timer reached zero, initiate batch processing
+                        if (newTime <= 0 && !(await kvStore.isProcessingBatch())) {
+                            console.log(`Timer reached zero, server ${serverId} initiating batch processing`);
+                            // Try to start batch processing
+                            await checkAndProcessBatch();
+                        }
+                    }
+                    // If timer is already at zero, process batch if not already processing
+                    else if (currentTimer <= 0 && !(await kvStore.isProcessingBatch())) {
+                        console.log(`Timer already at zero, server ${serverId} checking for batch processing`);
+                        // Check and process batch (it will handle resetting the timer)
                         await checkAndProcessBatch();
                     }
                 } catch (error) {
@@ -177,9 +192,15 @@ export async function GET(request: Request) {
         const queue = subnet.mempool ? subnet.mempool.getQueue() : [];
         const maxQueueLength = 20;
 
+        // Get current timer value for decision making
+        const currentBatchTime = await kvStore.getNextBatchTime();
+
         // Process batch if timer reached zero or queue is full
-        const shouldProcessBatch = (await kvStore.getNextBatchTime() <= 0 && queue.length > 0) ||
+        const shouldProcessBatch = (currentBatchTime <= 0 && queue.length > 0) ||
             (queue.length >= maxQueueLength);
+
+        // If timer is at zero, we should reset it even if we don't process a batch
+        const timerAtZero = currentBatchTime <= 0;
 
         // Check if we should process a batch and no batch is being processed
         if (shouldProcessBatch && !(await kvStore.isProcessingBatch())) {
@@ -229,6 +250,11 @@ export async function GET(request: Request) {
                     console.log(`Server ${serverId} reset batch timer after processing`);
                 } catch (error) {
                     console.error(`Error processing batch on server ${serverId}:`, error);
+                    // Even if there was an error, try to reset the timer
+                    if (timerAtZero) {
+                        await kvStore.resetBatchTimer();
+                        console.log(`Server ${serverId} reset batch timer after error`);
+                    }
                 } finally {
                     // Reset processing flag and release lock
                     await kvStore.setIsProcessingBatch(false);
@@ -237,6 +263,34 @@ export async function GET(request: Request) {
                 }
             } else {
                 console.log(`Server ${serverId} couldn't acquire batch lock, another instance may be processing`);
+            }
+        }
+        // If timer is at zero but no transactions to process, still reset the timer
+        else if (timerAtZero && !(await kvStore.isProcessingBatch())) {
+            console.log(`Server ${serverId} attempting to acquire timer reset lock (no transactions to process)`);
+
+            // Use a special lock for timer reset to avoid conflicting with batch processing
+            if (await kvStore.acquireBatchLock('timer-reset', 5000)) {
+                try {
+                    console.log(`Server ${serverId} resetting timer (no transactions to process)`);
+                    await kvStore.resetBatchTimer();
+
+                    // Send a timer update to the client
+                    if (!isStreamClosed) {
+                        const status = subnet.getStatus ? subnet.getStatus() : 'online';
+                        const balances = await subnet.getBalances();
+                        await sendEvent({
+                            status,
+                            time: new Date().toISOString(),
+                            queue,
+                            balances,
+                            nextBatchTime: 30, // Reset to 30 seconds
+                            isProcessingBatch: false
+                        });
+                    }
+                } finally {
+                    await kvStore.releaseBatchLock('timer-reset');
+                }
             }
         }
     }

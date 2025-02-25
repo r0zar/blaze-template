@@ -39,6 +39,14 @@ export async function setNextBatchTime(seconds: number): Promise<void> {
  */
 export async function decrementBatchTime(): Promise<number> {
     try {
+        // Get current time first
+        const currentTime = await getNextBatchTime();
+
+        // Don't decrement if already zero
+        if (currentTime <= 0) {
+            return 0;
+        }
+
         // Use atomic decrement operation for better concurrency handling
         const newTime = await kv.decr(KV_NEXT_BATCH_TIME);
 
@@ -105,14 +113,31 @@ export async function setIsProcessingBatch(value: boolean): Promise<void> {
 }
 
 /**
- * Reset the batch timer to the default value
+ * Reset the batch timer to the default value (30 seconds)
+ * Also updates the last batch time
  */
 export async function resetBatchTimer(): Promise<void> {
     try {
-        await setNextBatchTime(DEFAULT_BATCH_TIME);
+        console.log(`Resetting batch timer to ${DEFAULT_BATCH_TIME} seconds`);
+
+        // Use explicit set operation instead of setNextBatchTime for more reliable behavior
+        await kv.set(KV_NEXT_BATCH_TIME, DEFAULT_BATCH_TIME);
+
+        // Update the last batch time
         await updateLastBatchTime();
+
+        // Verify the timer was reset properly
+        const newTimer = await getNextBatchTime();
+        console.log(`Verified batch timer reset: ${newTimer} seconds`);
     } catch (error) {
         console.error('Error resetting batch timer in KV:', error);
+
+        // Fallback direct attempt if the first fails
+        try {
+            await kv.set(KV_NEXT_BATCH_TIME, DEFAULT_BATCH_TIME);
+        } catch (fallbackError) {
+            console.error('Critical error: Failed to reset timer after fallback attempt', fallbackError);
+        }
     }
 }
 
