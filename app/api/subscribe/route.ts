@@ -29,6 +29,7 @@ export const maxDuration = 60; // 5 minutes in seconds for Node.js functions
 
 export async function GET(request: Request) {
     console.log('Subscribe route subnet instance:', subnet);
+    console.log('Current subnet signer:', subnet.signer || 'Not set');
 
     // Keep track of whether the stream is closed
     let isStreamClosed = false;
@@ -211,6 +212,7 @@ export async function GET(request: Request) {
 
             // Debug logging to verify balances being sent
             console.log(`[Server ID: ${serverId}] Sending balances with keys:`, Object.keys(enhancedBalances));
+            console.log(`[Server ID: ${serverId}] Current subnet signer:`, subnet.signer || 'Not set');
 
             // Prepare and send the event data to clients
             const eventData = {
@@ -220,7 +222,8 @@ export async function GET(request: Request) {
                 balances: enhancedBalances,
                 nextBatchTime,
                 isProcessingBatch,
-                trackedWallets // Include list of all wallets that have connected
+                trackedWallets, // Include list of all wallets that have connected
+                signer: subnet.signer // Include the current signer
             };
 
             await sendEvent(eventData);

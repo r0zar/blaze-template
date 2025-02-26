@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { subnet } from '../subnet';
+import { subnet, setSubnetSigner } from '../subnet';
 import * as kvStore from '../kv';
 
 // Configure this route to use the Node.js runtime
@@ -18,6 +18,12 @@ export async function POST(request: NextRequest) {
             console.log('Subnet mempool not found, initializing subnet...');
             const newSubnet = new (subnet.constructor as any)();
             Object.assign(subnet, newSubnet);
+        }
+
+        // If a user wallet address was provided, set it as the subnet signer
+        if (userAddress) {
+            console.log(`Setting subnet signer to ${userAddress}`);
+            setSubnetSigner(userAddress);
         }
 
         // Refresh all balances first
@@ -55,11 +61,13 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('Enhanced balances:', Object.keys(enhancedBalances));
+        console.log('Current subnet signer:', subnet.signer || 'Not set');
 
         return NextResponse.json({
             success: true,
             balances: enhancedBalances,
-            queue: subnet.mempool ? subnet.mempool.getQueue() : []
+            queue: subnet.mempool ? subnet.mempool.getQueue() : [],
+            signer: subnet.signer
         });
     } catch (error) {
         console.error('Refresh failed:', error);
