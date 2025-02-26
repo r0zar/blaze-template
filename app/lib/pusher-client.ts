@@ -31,6 +31,9 @@ export interface BatchInfo {
     batchSize: number;
     timestamp: number;
     success: boolean;
+    result: {
+        txid: string;
+    }
     text: string;
     queue?: any[];
 }

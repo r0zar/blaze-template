@@ -55,7 +55,7 @@ function ActionButtons() {
                             : String(state.pusherStatus || 'N/A')}</div>
                         <div>Balances: {state.balances ? Object.keys(state.balances).length : 0} addresses</div>
                         <div>Queue: {state.txRequests?.length || 0} transactions</div>
-                        <div>Last Batch: {state.lastSettlement ? `${state.lastSettlement.batchSize} tx` : 'N/A'}</div>
+                        <div>Last Batch: {state.lastBatch ? `${state.lastBatch.batchSize} tx` : 'N/A'}</div>
                         <div className="flex items-center">
                             <div className={`w-2 h-2 rounded-full mr-1 ${state.connectionState === 'connected' ? 'bg-green-500' :
                                 state.connectionState === 'connecting' ? 'bg-yellow-500 animate-pulse' :
@@ -267,20 +267,20 @@ function ActionButtons() {
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
                         <h3 className="text-xl font-semibold">Recent Transactions</h3>
-                        <div className={`flex items-center gap-2 ${getPillClasses(state.isSettling, state.lastSettlement)}`} data-tour="batch-status">
-                            <div className={`w-2 h-2 rounded-full ${getIndicatorClasses(state.isSettling, state.lastSettlement, state.txRequests.length)}`} />
+                        <div className={`flex items-center gap-2 ${getPillClasses(state.isSettling, state.lastBatch)}`} data-tour="batch-status">
+                            <div className={`w-2 h-2 rounded-full ${getIndicatorClasses(state.isSettling, state.lastBatch, state.txRequests.length)}`} />
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                 {state.connectionState === 'connected' ?
-                                    getStatusText(state.isSettling, state.lastSettlement, state.txRequests.length) :
+                                    getStatusText(state.isSettling, state.lastBatch, state.txRequests.length) :
                                     state.connectionState === 'connecting' ? 'Connecting...' :
                                         state.connectionState === 'error' ? 'Connection Error' :
                                             state.connectionState === 'disconnected' ? 'Disconnected' :
                                                 'Initializing...'}
                             </span>
                         </div>
-                        {state.lastSettlement && state.lastSettlement.txId && Date.now() - state.lastSettlement.timestamp < 10000 && (
+                        {state.lastBatch && state.lastBatch.txId && Date.now() - state.lastBatch.timestamp < 10000 && (
                             <ExplorerLink
-                                txId={state.lastSettlement.txId}
+                                txId={state.lastBatch.txId}
                                 variant="badge"
                                 size="sm"
                                 label="View Batch"

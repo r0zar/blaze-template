@@ -26,7 +26,7 @@ export interface ActionButtonState {
     messageTitle: string | null;
     isLoading: boolean;
     isSettling: boolean;
-    lastSettlement: {
+    lastBatch: {
         batchSize: number;
         timestamp: number;
         txId?: string;
@@ -55,7 +55,7 @@ interface ActionButtonActions {
     setBalances: (balances: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => void;
     setTxRequests: (txs: Transaction[]) => void;
     setIsSettling: (isSettling: boolean) => void;
-    setLastSettlement: (settlement: { batchSize: number; timestamp: number; txId?: string; } | null) => void;
+    setLastBatch: (settlement: { batchSize: number; timestamp: number; txId?: string; } | null) => void;
     setIsLoading: (loading: boolean) => void;
     setIsWalletConnected: (connected: boolean) => void;
     selectTargetAddress: (address: string) => void;
@@ -71,7 +71,7 @@ export function useActionButtonState() {
     const [messageTitle, setMessageTitle] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSettling, setIsSettling] = useState(false);
-    const [lastSettlement, setLastSettlement] = useState<{
+    const [lastBatch, setLastBatch] = useState<{
         batchSize: number;
         timestamp: number;
         txId?: string;
@@ -89,7 +89,7 @@ export function useActionButtonState() {
         balances: pusherBalances,
         queue: pusherQueue,
         status: pusherStatus,
-        lastSettlement: pusherLastBatchInfo,
+        lastBatch: pusherLastBatchInfo,
         isLoading: pusherLoading,
         connectionState,
         refreshData
@@ -201,11 +201,10 @@ export function useActionButtonState() {
                 ? new Date(pusherLastBatchInfo.timestamp).getTime()
                 : Date.now();
 
-            setLastSettlement({
-                batchSize: typeof pusherLastBatchInfo.batchSize === 'number' ? pusherLastBatchInfo.batchSize : 0,
-                timestamp,
-                txId: pusherLastBatchInfo.hasOwnProperty('txId') ? (pusherLastBatchInfo as any).txId : '????'
-            });
+            const batchSize = pusherLastBatchInfo.batchSize;
+            const txId = pusherLastBatchInfo.result.txid;
+
+            setLastBatch({ batchSize, timestamp, txId });
 
             // Show a success message
             toast.success('Transaction batch successfully mined!', {
@@ -491,7 +490,7 @@ export function useActionButtonState() {
             messageTitle,
             isLoading,
             isSettling,
-            lastSettlement,
+            lastBatch,
             transactionCounter,
             isWalletConnected,
             selectedTargetAddress,
@@ -514,7 +513,7 @@ export function useActionButtonState() {
             setBalances,
             setTxRequests,
             setIsSettling,
-            setLastSettlement,
+            setLastBatch,
             setIsLoading,
             setIsWalletConnected,
             selectTargetAddress,

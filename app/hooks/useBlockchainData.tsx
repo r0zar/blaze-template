@@ -20,7 +20,7 @@ export default function useBlockchainData() {
     const [queue, setQueue] = useState<any[]>([]);
     const [isSettling, setIsSettling] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [lastSettlement, setLastSettlement] = useState<BatchInfo | null>(null);
+    const [lastBatch, setLastBatch] = useState<BatchInfo | null>(null);
 
     // Use refs for tracking connection state to avoid re-renders
     const lastEventTimeRef = useRef<number>(Date.now());
@@ -287,7 +287,7 @@ export default function useBlockchainData() {
 
                 processingBatchRef.current = false;
                 setIsSettling(false);
-                setLastSettlement(data);
+                setLastBatch(data);
 
                 // Show success or error toast based on batch result
                 if (data.success) {
@@ -345,7 +345,7 @@ export default function useBlockchainData() {
         queue,
         isSettling,
         isLoading,
-        lastSettlement,
+        lastBatch,
         refreshData,
         connectionState: connectionStateRef.current
     };
