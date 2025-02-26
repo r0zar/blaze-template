@@ -253,7 +253,7 @@ async function processBatch() {
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: {
                 state: 'processing',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet || null,
                 txQueue: state.queue,
                 lastProcessedBlock: null
             },
@@ -261,32 +261,35 @@ async function processBatch() {
             message: 'Processing batch'
         });
 
+        const newState = await getSubnetState();
+        Object.assign(state, newState);
+
         // Process batch with optimal size
         const batchSize = Math.min(state.queue.length, MAX_BATCH_SIZE);
         console.log(`Mining block with ${batchSize} transactions...`);
-        await subnet.mineBlock(batchSize);
+
+        const result = await subnet.mineBlock(batchSize);
+        console.log('Block mined:', result);
 
         // Update state and last batch time
-        await refreshBalances(true);
+        // await refreshBalances(true);
         await kvStore.setLastBatchTime(Date.now());
-
-        const newState = await getSubnetState();
-        Object.assign(state, newState);
 
         // Send notifications sequentially via Pusher
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.BATCH_PROCESSED, {
             batchSize,
             timestamp: Date.now(),
             success: true,
+            ...result,
             text: `${batchSize} transactions have been mined in a block and settled on-chain`
         });
 
-        await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.BALANCE_UPDATES, state.balances);
+        // await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.BALANCE_UPDATES, state.balances);
 
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: {
                 state: 'idle',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet || null,
                 txQueue: state.queue,
                 lastProcessedBlock: null
             },
@@ -301,7 +304,7 @@ async function processBatch() {
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: {
                 state: 'error',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet || null,
                 txQueue: state.queue,
                 lastProcessedBlock: null
             },
