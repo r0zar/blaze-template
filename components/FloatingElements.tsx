@@ -77,6 +77,7 @@ const FloatingElements = React.memo(function FloatingElements({ transactionSucce
     moneybag: false
   });
   const [positions, setPositions] = useState(initialPositions);
+  const [isInitialized, setIsInitialized] = useState(false);
   const hasMounted = useRef(false);
 
   useEffect(() => {
@@ -87,17 +88,23 @@ const FloatingElements = React.memo(function FloatingElements({ transactionSucce
       // Set random positions
       setPositions(generateRandomPositions());
 
-      // Stagger the appearance of each element
+      // Mark as initialized immediately to apply positions
+      setIsInitialized(true);
+
+      // Stagger the appearance of each element after a delay to ensure positions are applied
       const elements = ['bitcoin1', 'welsh1', 'bitcoin2', 'flame1', 'flame2', 'sparkle', 'moneybag'];
 
-      elements.forEach((element, index) => {
-        setTimeout(() => {
-          setElementStates(prev => ({
-            ...prev,
-            [element]: true
-          }));
-        }, 300 + (index * 150)); // Start after 300ms, then stagger by 150ms each
-      });
+      // Slight delay before starting animations to ensure positioning is complete
+      setTimeout(() => {
+        elements.forEach((element, index) => {
+          setTimeout(() => {
+            setElementStates(prev => ({
+              ...prev,
+              [element]: true
+            }));
+          }, index * 150); // Stagger by 150ms each
+        });
+      }, 100); // Small delay to ensure CSS has applied the positions
     }
   }, []);
 
@@ -226,6 +233,15 @@ const FloatingElements = React.memo(function FloatingElements({ transactionSucce
           }
         }
 
+        .floating-elements-container {
+          opacity: 0;
+          transition: opacity 0.3s ease-in-out;
+        }
+
+        .floating-elements-container.initialized {
+          opacity: 1;
+        }
+
         .floating-element {
           position: absolute;
           z-index: -1;
@@ -236,9 +252,11 @@ const FloatingElements = React.memo(function FloatingElements({ transactionSucce
           opacity: 0;
           transform: scale(0.5) translateY(20px);
           filter: blur(10px);
+          visibility: hidden; /* Hide elements until positioned correctly */
         }
 
         .floating-element.visible {
+          visibility: visible; /* Show elements once positioned */
           animation: pop-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
@@ -334,7 +352,7 @@ const FloatingElements = React.memo(function FloatingElements({ transactionSucce
         }
       `}</style>
 
-      <div className="floating-elements-container">
+      <div className={`floating-elements-container ${isInitialized ? 'initialized' : ''}`}>
         {/* Randomly positioned Bitcoin emoji */}
         <div
           className={`floating-element bitcoin-emoji float-erratic ${elementStates.bitcoin1 ? 'visible' : ''}`}

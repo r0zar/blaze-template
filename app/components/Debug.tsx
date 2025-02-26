@@ -5,12 +5,14 @@ import { Zap, Trash2, ArrowRightLeft, Loader2, RefreshCw } from 'lucide-react';
 import { trimQueue, trimStatus } from '../lib/utils';
 import { useActionButtonState } from '../hooks/useActionButtonState';
 import toast from 'react-hot-toast';
+import { useDeveloperMode } from '../contexts/DeveloperModeContext';
 
 export default function Debug() {
     const { state, actions } = useActionButtonState();
     const [isLoading, setIsLoading] = useState(false);
     const [isClearingQueue, setIsClearingQueue] = useState(false);
     const [lastResponse, setLastResponse] = useState<any>(null);
+    const { isDeveloperMode } = useDeveloperMode();
 
     const handleForceBatch = async () => {
         try {
@@ -63,8 +65,8 @@ export default function Debug() {
         }
     };
 
-    // Only show in development
-    if (process.env.NODE_ENV !== 'development') {
+    // Only show in development mode OR when developer mode is enabled via toggle
+    if (process.env.NODE_ENV !== 'development' && !isDeveloperMode) {
         return null;
     }
 
@@ -76,7 +78,9 @@ export default function Debug() {
                     <div>
                         <h2 className="text-2xl font-semibold mb-2">Developer Controls</h2>
                         <p className="text-gray-600 dark:text-gray-400">
-                            Debugging tools and real-time blockchain status
+                            {process.env.NODE_ENV === 'development'
+                                ? "Development environment - debugging tools enabled"
+                                : "Developer mode enabled via settings"}
                         </p>
                     </div>
                 </div>

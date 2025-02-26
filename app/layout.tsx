@@ -5,6 +5,7 @@ import "./tour.css";
 import FloatingElements from "@/components/FloatingElements";
 import NavButton from "@/components/NavButton";
 import { Providers } from './providers'
+import { DeveloperModeProvider } from './contexts/DeveloperModeContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,17 +47,19 @@ export default function RootLayout({
         {/* Background Mesh Gradient Filter */}
         <div className="mesh-gradient fixed inset-0 -z-10 opacity-5" />
 
-        {/* Floating Elements with transaction success state */}
-        <FloatingElements />
+        <DeveloperModeProvider>
+          {/* Floating Elements with transaction success state */}
+          <FloatingElements />
 
-        {/* Navigation Menu */}
-        <NavButton />
+          {/* Navigation Menu */}
+          <NavButton />
 
-        <div className="relative z-0">
-          <Providers>
-            {children}
-          </Providers>
-        </div>
+          <div className="relative z-0">
+            <Providers>
+              {children}
+            </Providers>
+          </div>
+        </DeveloperModeProvider>
       </body>
     </html>
   );

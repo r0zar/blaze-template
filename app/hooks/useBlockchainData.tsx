@@ -85,7 +85,7 @@ export default function useBlockchainData() {
             console.error('[Blaze] Error loading initial data:', error);
 
             // More detailed error handling
-            let errorMessage = 'Failed to load blockchain data';
+            let errorMessage = 'Failed to load Blaze data';
 
             if (error instanceof Error) {
                 if (error.name === 'AbortError') {
@@ -327,7 +327,7 @@ export default function useBlockchainData() {
     // Refresh data function for manual refresh
     const refreshData = useCallback(async () => {
         console.log('[Blaze] Manual refresh requested');
-        toast.loading('Refreshing blockchain data...', { id: 'refresh-data' });
+        toast.loading('Refreshing Blaze data...', { id: 'refresh-data' });
 
         try {
             await loadInitialData();

@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Flame, Menu, X, ExternalLink, BarChart2, Home, HelpCircle } from 'lucide-react';
+import { Flame, Menu, X, ExternalLink, BarChart2, Home, HelpCircle, Terminal } from 'lucide-react';
 import TourManager from './TourManager';
+import { useDeveloperMode } from '@/app/contexts/DeveloperModeContext';
 
 export default function NavButton() {
     const [isOpen, setIsOpen] = useState(false);
     const [isTourButtonClicked, setIsTourButtonClicked] = useState(false);
+    const { isDeveloperMode, toggleDeveloperMode } = useDeveloperMode();
 
     const startTour = () => {
         setIsTourButtonClicked(true);
@@ -74,6 +76,20 @@ export default function NavButton() {
                             >
                                 <HelpCircle className="w-4 h-4" />
                                 Start Tour Guide
+                            </button>
+
+                            {/* Developer Mode Toggle */}
+                            <button
+                                onClick={() => {
+                                    toggleDeveloperMode();
+                                    setIsOpen(false);
+                                }}
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 flex items-center gap-2"
+                            >
+                                <Terminal className="w-4 h-4" />
+                                <span className={isDeveloperMode ? "text-blue-600 dark:text-blue-400 font-medium" : "text-gray-700 dark:text-gray-300"}>
+                                    Developer Mode: {isDeveloperMode ? "On" : "Off"}
+                                </span>
                             </button>
                         </div>
                     </div>
