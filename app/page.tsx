@@ -125,9 +125,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Debug Section */}
-          <Debug />
-
           <div className="mb-6">
             <h2 className="text-3xl font-bold mb-2">Try It Now</h2>
             <p className="text-base text-gray-600 dark:text-gray-400">
@@ -135,7 +132,13 @@ export default function Home() {
             </p>
           </div>
           <ActionButtons />
+
+          <div className="mt-12" />
+
+          {/* Debug Section */}
+          <Debug />
         </div>
+
       </main>
 
       {/* Footer */}
