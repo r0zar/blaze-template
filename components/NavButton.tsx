@@ -20,10 +20,10 @@ export default function NavButton() {
 
     return (
         <>
-            {/* <TourManager
+            <TourManager
                 isNavTourButtonClicked={isTourButtonClicked}
                 onTourComplete={handleTourComplete}
-            /> */}
+            />
 
             <div className="fixed top-4 right-4 z-50">
                 <button
