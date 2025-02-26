@@ -11,7 +11,7 @@ if (!global.subnet) {
 
     // Initialize with a default signer
     // This is a test network signer - replace with your actual private key in production
-    global.subnet.signer = 'SP2ZNGJ85ENDY6QRHQ5P2D4FXKGZWCKTB2T0Z55KS';
+    global.subnet.signer = 'SP2MR4YP9C7P93EJZC4W1JT8HKAX8Q4HR9Q6X3S88';
     console.log('Subnet initialized with default signer');
 }
 
