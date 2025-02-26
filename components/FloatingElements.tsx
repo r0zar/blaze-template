@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 
 // Define position types
 type Position = {
@@ -353,7 +354,14 @@ const FloatingElements = React.memo(function FloatingElements({ transactionSucce
             right: positions.welsh1.right
           }}
         >
-          <img src="https://charisma.rocks/welsh-logo.png" alt="Welsh Token" style={{ width: '100%', height: '100%' }} />
+          <Image
+            src="https://charisma.rocks/welsh-logo.png"
+            alt="Welsh Token"
+            width={50}
+            height={50}
+            loading="lazy"
+            style={{ objectFit: 'contain' }}
+          />
         </div>
 
         {/* Randomly positioned Bitcoin emoji */}

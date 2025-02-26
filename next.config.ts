@@ -2,6 +2,13 @@ const path = require('path')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        hostname: 'charisma.rocks',
+      },
+    ],
+  },
   transpilePackages: ['blaze-sdk'],
   webpack: (config: any, { isServer }: any) => {
     config.resolve.symlinks = true
