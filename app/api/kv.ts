@@ -50,9 +50,17 @@ export async function decrementBatchTime(): Promise<number> {
             return 0;
         }
 
-        // Use atomic decrement operation for better concurrency handling
-        const newTime = await kv.decr(KV_NEXT_BATCH_TIME);
-        console.log(`Decremented timer: ${currentTime} -> ${newTime}`);
+        // Slow down the timer - only decrement by 0.2 seconds each time
+        // This makes the timer move at 1/5 speed, which should feel more natural
+        const decrementAmount = 1;
+
+        // Instead of using atomic decrement, which can only decrease by integers,
+        // we'll get the current value, subtract our fractional amount, and set it back
+        const newTime = Math.max(0, currentTime - decrementAmount);
+
+        // Set the new time value
+        await setNextBatchTime(newTime);
+        console.log(`Decremented timer by ${decrementAmount}: ${currentTime} -> ${newTime}`);
 
         // If the result is negative, reset to 0
         if (newTime < 0) {

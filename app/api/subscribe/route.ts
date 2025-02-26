@@ -1,5 +1,7 @@
 import { subnet } from '../subnet';
-import { randomUUID } from 'crypto';
+// Replace Node.js crypto import with Web API compatible UUID generation
+// This is compatible with Edge Runtime
+// import { randomUUID } from 'crypto';
 import * as kvStore from '../kv';
 
 // IMPORTANT: This implementation uses Vercel KV to synchronize batch timers across serverless functions
@@ -7,11 +9,23 @@ import * as kvStore from '../kv';
 
 // Generate a unique server ID for this serverless instance
 // This helps with distributed locking to prevent race conditions
-const serverId = randomUUID();
+// const serverId = randomUUID();
+// Use Web API compatible UUID generation
+const serverId = crypto.randomUUID();
 console.log(`Subscribe route initialized with serverId: ${serverId}`);
 
 // Initialize the KV store with default values if not set
 kvStore.initializeKV().catch(console.error);
+
+// Configure this route to run in Node.js environment instead of Edge
+// This ensures compatibility with all the libraries and dependencies
+export const runtime = 'nodejs';
+
+// Set Dynamic to avoid ISR caching
+export const dynamic = 'force-dynamic';
+
+// Set the maximum duration to the highest possible value
+export const maxDuration = 300; // 5 minutes in seconds for Node.js functions
 
 export async function GET(request: Request) {
     console.log('Subscribe route subnet instance:', subnet);
@@ -78,7 +92,7 @@ export async function GET(request: Request) {
             console.log(`Server ${serverId} acquired timer lock`);
 
             // We got the lock, so we're responsible for decrementing the timer
-            // Use a longer interval (1500ms) to compensate for potential timing issues
+            // Increase the interval to 5 seconds to slow down the timer even more
             timerInterval = setInterval(async () => {
                 try {
                     // Double check if we still have the lock
@@ -96,13 +110,13 @@ export async function GET(request: Request) {
                         }
                     }
 
-                    // Implement rate limiting - only decrement once per second
+                    // Implement rate limiting - only decrement once per 5 seconds
                     const now = Date.now();
                     const timeSinceLastDecrement = now - lastDecrementTime;
 
-                    // Ensure at least 1000ms has passed since last decrement
-                    if (timeSinceLastDecrement < 1000) {
-                        console.log(`Server ${serverId} skipping decrement - too soon (${timeSinceLastDecrement}ms since last)`);
+                    // Ensure at least 5000ms has passed since last decrement
+                    if (timeSinceLastDecrement < 5000) {
+                        console.log(`Server ${serverId} skipping decrement - too soon (${timeSinceLastDecrement}ms since last, need 5000ms)`);
                         return;
                     }
 
@@ -138,7 +152,7 @@ export async function GET(request: Request) {
                     // If we encounter an error, assume we lost the lock and try to reacquire next time
                     hasTimerLock = false;
                 }
-            }, 1500); // Increase to 1.5 seconds to avoid multiple decrements per second
+            }, 5000); // Increase to 5 seconds to slow down the timer
         } else {
             console.log(`Server ${serverId} couldn't acquire timer lock initially, will poll for timer updates only`);
 
@@ -224,7 +238,7 @@ export async function GET(request: Request) {
                 }
             }
         }
-    }, 1000); // Reduced from 100ms to 1000ms to lower pressure on the system
+    }, 500); // Reduced from 100ms to 1000ms to lower pressure on the system
 
     // Function to check and process batches
     async function checkAndProcessBatch() {
@@ -269,7 +283,7 @@ export async function GET(request: Request) {
                             time: new Date().toISOString(),
                             queue,
                             balances,
-                            nextBatchTime: 30, // Reset to 30 seconds
+                            nextBatchTime: 60, // Use consistent batch time of 60 seconds
                             isProcessingBatch: false
                         });
                     }
@@ -328,7 +342,7 @@ export async function GET(request: Request) {
                                 time: new Date().toISOString(),
                                 queue: updatedQueue,
                                 balances: updatedBalances,
-                                nextBatchTime: 30, // Reset to 30 seconds after mining
+                                nextBatchTime: 60, // Use consistent batch time of 60 seconds
                                 isProcessingBatch: false,
                                 settlement: {
                                     batchSize,

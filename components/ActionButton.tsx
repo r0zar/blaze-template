@@ -80,70 +80,100 @@ function ActionButtons() {
         });
     };
 
-    // Function to handle wallet connection toggle
+    // Function to handle wallet connection toggle with improved error handling
     const toggleWalletConnection = async () => {
-        if (isWalletConnected) {
-            // Disconnect wallet
-            const address = blaze.getWalletAddress();
-            blaze.disconnectWallet();
-            setIsWalletConnected(false);
-            setMessage("Wallet disconnected successfully");
-            setMessageTitle("Wallet disconnected");
-            setTimeout(() => setMessage(null), 5000);
-
-            // Track wallet disconnection
-            try {
-                await fetch('/api/wallet/track', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        address,
-                        action: 'disconnect'
-                    })
-                });
-            } catch (error) {
-                console.error('Error tracking wallet disconnection:', error);
-            }
-        } else {
-            // Connect wallet
-            const address = await blaze.connectWallet();
-            if (address) {
-                setIsWalletConnected(true);
-                setMessage("Wallet connected successfully");
-                setMessageTitle("Wallet connected");
+        try {
+            if (isWalletConnected) {
+                // Disconnect wallet
+                const address = blaze.getWalletAddress();
+                blaze.disconnectWallet();
+                setIsWalletConnected(false);
+                setMessage("Wallet disconnected successfully");
+                setMessageTitle("Wallet disconnected");
                 setTimeout(() => setMessage(null), 5000);
 
-                // Initialize balance for the new wallet if it doesn't exist
-                setBalances((prevBalances: Record<string, number>) => {
-                    if (!prevBalances[address]) {
-                        return { ...prevBalances, [address]: 0 };
-                    }
-                    return prevBalances;
-                });
-
-                // Refresh balances
-                fetch('/api/refresh', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user: address })
-                });
-
-                // Track wallet connection
+                // Track wallet disconnection
                 try {
-                    const currentBalance = balances[address] || 0;
                     await fetch('/api/wallet/track', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             address,
-                            action: 'connect',
-                            balance: currentBalance
+                            action: 'disconnect'
                         })
                     });
                 } catch (error) {
-                    console.error('Error tracking wallet connection:', error);
+                    console.error('Error tracking wallet disconnection:', error);
+                }
+            } else {
+                // Connect wallet with more robust error handling
+                try {
+                    const address = await blaze.connectWallet();
+                    if (address) {
+                        console.log(`Wallet connected: ${address}`);
+                        setIsWalletConnected(true);
+                        setMessage("Wallet connected successfully");
+                        setMessageTitle("Wallet connected");
+                        setTimeout(() => setMessage(null), 5000);
+
+                        // Initialize balance for the new wallet if it doesn't exist
+                        setBalances((prevBalances: Record<string, number>) => {
+                            const updatedBalances = { ...prevBalances };
+                            if (!updatedBalances[address]) {
+                                updatedBalances[address] = 0;
+                            }
+                            console.log('Updated balances with connected wallet:', Object.keys(updatedBalances));
+                            return updatedBalances;
+                        });
+
+                        // Refresh balances immediately after connection
+                        try {
+                            const response = await fetch('/api/refresh', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ user: address })
+                            });
+
+                            if (response.ok) {
+                                console.log('Balance refresh successful after wallet connection');
+                            } else {
+                                console.warn('Balance refresh returned non-OK response:', response.status);
+                            }
+                        } catch (refreshError) {
+                            console.error('Error refreshing balances after connection:', refreshError);
+                        }
+
+                        // Track wallet connection
+                        try {
+                            const currentBalance = balances[address] || 0;
+                            await fetch('/api/wallet/track', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    address,
+                                    action: 'connect',
+                                    balance: currentBalance
+                                })
+                            });
+                            console.log('Wallet tracking successful');
+                        } catch (error) {
+                            console.error('Error tracking wallet connection:', error);
+                        }
+                    } else {
+                        console.error('Connect wallet returned empty address');
+                        setMessageTitle("Connection Error");
+                        setMessage("Failed to connect wallet - no address returned");
+                    }
+                } catch (walletError) {
+                    console.error('Error connecting wallet:', walletError);
+                    setMessageTitle("Wallet Connection Error");
+                    setMessage("Failed to connect wallet. Please try again.");
                 }
             }
+        } catch (error) {
+            console.error('Unexpected error in toggleWalletConnection:', error);
+            setMessageTitle("Wallet Error");
+            setMessage("An unexpected error occurred with your wallet.");
         }
     };
 
@@ -209,24 +239,32 @@ function ActionButtons() {
     useEffect(() => {
         let eventSource: EventSource | null = null;
         let reconnectAttempts = 0;
-        const maxReconnectAttempts = 5;
-        const reconnectDelay = 3000; // Base delay in ms
+        const maxReconnectAttempts = 10; // Increase max attempts
+        const reconnectDelay = 1000; // Shorter initial delay
         let heartbeatInterval: NodeJS.Timeout | null = null;
 
         const connectSSE = () => {
-            console.log('Connecting to SSE stream...');
+            console.log('%c[SSE] Connecting to SSE stream...', 'color: blue; font-weight: bold');
 
             // Close any existing connection
             if (eventSource) {
                 eventSource.close();
             }
 
-            eventSource = new EventSource('/api/subscribe');
+            // Add timestamp to URL to prevent caching
+            eventSource = new EventSource(`/api/subscribe?t=${Date.now()}`);
 
             eventSource.onopen = () => {
-                console.log('SSE connection opened successfully');
+                console.log('%c[SSE] Connection opened successfully', 'color: green; font-weight: bold');
                 setIsLoading(false);
                 reconnectAttempts = 0; // Reset attempts on successful connection
+
+                // Send immediate refresh request to get latest data
+                fetch('/api/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ force: true })
+                }).catch(err => console.error('Error sending refresh request:', err));
 
                 // Set up heartbeat to periodically update wallet activity if connected
                 if (heartbeatInterval) clearInterval(heartbeatInterval);
@@ -248,7 +286,7 @@ function ActionButtons() {
             };
 
             eventSource.onerror = (error) => {
-                console.error('SSE connection error:', error);
+                console.error('%c[SSE] Connection error:', 'color: red; font-weight: bold', error);
 
                 if (eventSource) {
                     eventSource.close();
@@ -257,10 +295,23 @@ function ActionButtons() {
                     if (reconnectAttempts < maxReconnectAttempts) {
                         reconnectAttempts++;
                         const delay = reconnectDelay * Math.pow(1.5, reconnectAttempts - 1);
-                        console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})...`);
+                        console.log(`%c[SSE] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})...`, 'color: orange');
+
+                        // Also trigger a manual refresh of balances
+                        if (isWalletConnected) {
+                            const address = blaze.getWalletAddress();
+                            if (address) {
+                                fetch('/api/refresh', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ user: address })
+                                }).catch(err => console.error('Error refreshing balances during reconnect:', err));
+                            }
+                        }
+
                         setTimeout(connectSSE, delay);
                     } else {
-                        console.error(`Failed to reconnect after ${maxReconnectAttempts} attempts`);
+                        console.error(`%c[SSE] Failed to reconnect after ${maxReconnectAttempts} attempts`, 'color: red; font-weight: bold');
                         setMessageTitle("Connection Error");
                         setMessage("Failed to connect to server. Please refresh the page.");
                     }
@@ -270,21 +321,25 @@ function ActionButtons() {
             eventSource.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+                    const dataKeys = Object.keys(data);
+                    console.log('%c[SSE] Event received with keys:', 'color: purple', dataKeys.join(', '));
 
-                    // Debug timer updates
+                    // Debug timer updates with timestamps for better traceability
                     if (data.nextBatchTime !== undefined) {
-                        console.log(`Timer update received: ${data.nextBatchTime}s`);
+                        const now = new Date();
+                        console.log(`%c[TIMER ${now.toISOString()}] Update: ${data.nextBatchTime}s`, 'color: blue');
                         setNextBatchTime(data.nextBatchTime);
                     }
 
                     // Handle batch processing status
                     if (data.isProcessingBatch !== undefined) {
+                        console.log(`%c[BATCH] Processing state: ${data.isProcessingBatch}`, 'color: orange');
                         setIsSettling(data.isProcessingBatch);
                     }
 
                     // Check for settlement events
                     if (data.settlement) {
-                        console.log('Settlement event received:', data.settlement);
+                        console.log('%c[SETTLEMENT] Event received:', 'color: green; font-weight: bold', data.settlement);
 
                         // Update settlement information
                         setLastSettlement({
@@ -304,14 +359,40 @@ function ActionButtons() {
                         setTimeout(() => setMessage(null), 5000);
                     }
 
-                    // Update balances
+                    // Update balances - with extensive logging
                     if (data.balances) {
-                        console.log('Received balances from server:', Object.keys(data.balances));
-                        setBalances(data.balances);
+                        const balanceKeys = Object.keys(data.balances);
+                        console.log('%c[BALANCES] Received from server:', 'color: green', balanceKeys);
+
+                        if (balanceKeys.length === 0) {
+                            console.warn('%c[BALANCES] Warning: Empty balances object received', 'color: orange');
+                        }
+
+                        // Make sure we don't lose any addresses that might be in the current state
+                        setBalances((prevBalances: Record<string, number>) => {
+                            const prevKeys = Object.keys(prevBalances);
+                            console.log('%c[BALANCES] Previous keys:', 'color: blue', prevKeys);
+
+                            // Combine previous and new balances to ensure nothing is lost
+                            const combinedBalances = { ...prevBalances };
+
+                            // Update with new values from server
+                            for (const address of balanceKeys) {
+                                combinedBalances[address] = data.balances[address];
+                            }
+
+                            // Debug log the final balances
+                            const finalKeys = Object.keys(combinedBalances);
+                            console.log('%c[BALANCES] Updated with keys:', 'color: green', finalKeys);
+                            console.log('%c[BALANCES] Values:', 'color: green', JSON.stringify(combinedBalances));
+                            return combinedBalances;
+                        });
                     }
 
-                    // Update transaction queue
+                    // Update transaction queue with better logging
                     if (data.queue) {
+                        console.log(`%c[QUEUE] Received ${data.queue.length} transactions`, 'color: purple',
+                            data.queue.length > 0 ? data.queue : '');
                         setTxRequests(data.queue);
                     }
 
@@ -320,17 +401,19 @@ function ActionButtons() {
                         setIsLoading(false);
                     }
                 } catch (error) {
-                    console.error('Error parsing SSE data:', error);
+                    console.error('%c[SSE] Error parsing data:', 'color: red', error);
+                    console.error('Raw event data:', event.data);
                 }
             };
         };
 
+        // Immediately connect to SSE
         connectSSE();
 
         // Clean up function to close the EventSource
         return () => {
             if (eventSource) {
-                console.log('Closing SSE connection');
+                console.log('%c[SSE] Closing connection', 'color: orange');
                 eventSource.close();
             }
             if (heartbeatInterval) {
@@ -364,8 +447,8 @@ function ActionButtons() {
             return `Mined batch of ${lastSettlement.batchSize} transactions`;
         }
 
-        // Add timer debugging information
-        return `Next batch in ${seconds}s`;
+        // Just display the timer value with one decimal place
+        return `Next batch in ${seconds.toFixed(1)}s`;
     };
 
     // Log timer updates with timestamp for debugging
@@ -376,13 +459,14 @@ function ActionButtons() {
 
     // Helper function to get the pill color based on state
     const getPillClasses = () => {
+        const baseClasses = 'px-3 py-1 rounded-full';
         if (isSettling) {
-            return 'bg-yellow-200/50 dark:bg-yellow-800/30 border border-yellow-300 dark:border-yellow-700';
+            return `${baseClasses} bg-yellow-200/50 dark:bg-yellow-800/30 border border-yellow-300 dark:border-yellow-700`;
         }
         if (lastSettlement && Date.now() - lastSettlement.timestamp < 2000) {
-            return 'bg-green-200/50 dark:bg-green-800/30 border border-green-300 dark:border-green-700';
+            return `${baseClasses} bg-green-200/50 dark:bg-green-800/30 border border-green-300 dark:border-green-700`;
         }
-        return 'bg-yellow-100/50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800';
+        return `${baseClasses} bg-yellow-100/50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800`;
     };
 
     // Helper function to get the indicator dot color based on state
@@ -401,9 +485,43 @@ function ActionButtons() {
     useEffect(() => {
         const interval = setInterval(() => {
             setForceUpdate(prev => prev + 1);
-        }, 1000);
+        }, 500);
         return () => clearInterval(interval);
     }, []);
+
+    // Add these new states and effects for smooth timer display
+    const [displayTimer, setDisplayTimer] = useState(nextBatchTime);
+    const [lastServerUpdate, setLastServerUpdate] = useState(Date.now());
+
+    // Update last server update timestamp when the server timer changes
+    useEffect(() => {
+        setDisplayTimer(nextBatchTime);
+        setLastServerUpdate(Date.now());
+        console.log(`Received server timer update: ${nextBatchTime}s`);
+    }, [nextBatchTime]);
+
+    // Use client-side interpolation to show smoother countdown
+    useEffect(() => {
+        // Only run interpolation if not settling and timer is greater than zero
+        if (isSettling || nextBatchTime <= 0) return;
+
+        // Update display timer more frequently (every 100ms)
+        const interpolationInterval = setInterval(() => {
+            setDisplayTimer(prevDisplay => {
+                // Calculate time since last server update
+                const elapsed = (Date.now() - lastServerUpdate) / 1000;
+
+                // Estimate what the actual timer should be by linearly interpolating
+                // Use the original timer speed of 0.5 seconds per real second
+                const estimatedTimer = Math.max(0, nextBatchTime - (elapsed * 0.5));
+
+                // Ensure we don't go below zero and round to one decimal place
+                return Math.max(0, parseFloat(estimatedTimer.toFixed(1)));
+            });
+        }, 100); // Update every 100ms for animation
+
+        return () => clearInterval(interpolationInterval);
+    }, [nextBatchTime, lastServerUpdate, isSettling]);
 
     // Function to handle selecting a target address
     const selectTargetAddress = (address: string) => {
@@ -661,10 +779,10 @@ function ActionButtons() {
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
                         <h3 className="text-xl font-semibold">Recent Transactions</h3>
-                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getPillClasses()}`} data-tour="batch-timer">
+                        <div className={`flex items-center gap-2 ${getPillClasses()}`} data-tour="batch-timer">
                             <div className={`w-2 h-2 rounded-full ${getIndicatorClasses()}`} />
                             <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-                                {formatCountdown(nextBatchTime)}
+                                {formatCountdown(displayTimer)}
                             </span>
                         </div>
                         {lastSettlement && lastSettlement.txId && Date.now() - lastSettlement.timestamp < 10000 && (
