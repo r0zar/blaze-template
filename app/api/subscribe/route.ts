@@ -280,7 +280,7 @@ async function processBatch() {
             batchSize,
             timestamp: Date.now(),
             success: true,
-            ...result,
+            result,
             text: `${batchSize} transactions have been mined in a block and settled on-chain`
         });
 
