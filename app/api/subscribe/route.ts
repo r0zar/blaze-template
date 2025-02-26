@@ -25,7 +25,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Set the maximum duration to the highest possible value
-export const maxDuration = 300; // 5 minutes in seconds for Node.js functions
+export const maxDuration = 60; // 5 minutes in seconds for Node.js functions
 
 export async function GET(request: Request) {
     console.log('Subscribe route subnet instance:', subnet);
