@@ -15,8 +15,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       blaze-sdk:
-        specifier: 0.5.6
-        version: 0.5.6
+        specifier: 0.5.7
+        version: 0.5.7(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       framer-motion:
         specifier: ^12.4.7
         version: 12.4.7(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -689,8 +689,8 @@ packages:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
 
-  blaze-sdk@0.5.6:
-    resolution: {integrity: sha512-kGhBI1g5vUjMpMnLYeZSWqL9RKoIyUmgn76kekSKq9In7lQ8vYotRvxUJdCfpH9PAW1SMCQAJkdYzeHiP8Ahxg==}
+  blaze-sdk@0.5.7:
+    resolution: {integrity: sha512-F7kGpYZT9/mdLja8Ddg7GA8uqwOk61iUK8TlGOLPmoX4i7lxR+WMM6SgoXW42l+c15Wn1c4cUluHcNlbCkC0Gw==}
     engines: {node: '>=18.0.0'}
 
   brace-expansion@1.1.11:
@@ -2739,15 +2739,18 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
-  blaze-sdk@0.5.6:
+  blaze-sdk@0.5.7(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
     dependencies:
       '@stacks/connect': 8.1.3
       '@stacks/network': 7.0.2
       '@stacks/transactions': 7.0.4
       axios: 1.7.9
+      react-hot-toast: 2.5.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
     transitivePeerDependencies:
       - debug
       - encoding
+      - react
+      - react-dom
 
   brace-expansion@1.1.11:
     dependencies:
@@ -2768,7 +2771,7 @@ snapshots:
 
   c32check@2.0.0:
     dependencies:
-      '@noble/hashes': 1.1.5
+      '@noble/hashes': 1.7.1
       base-x: 4.0.0
 
   call-bind-apply-helpers@1.0.2:
