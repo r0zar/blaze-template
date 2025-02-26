@@ -38,9 +38,7 @@
     "typescript": "^5"
   },
   "pnpm": {
-    "overrides": {
-      "blaze-sdk": "link:../blaze"
-    }
+    "overrides": {}
   },
   "_originalSdkVersion": "0.5.6"
 }
