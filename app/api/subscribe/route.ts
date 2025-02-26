@@ -239,10 +239,10 @@ async function processBatch() {
     if (!state.queue.length || state.isProcessing) return;
 
     // Try to acquire the batch lock
-    // if (!(await kvStore.acquireBatchLock('batch', 30000))) {
-    //     console.log('Could not acquire batch lock, another process may be handling the batch');
-    //     return;
-    // }
+    if (!(await kvStore.acquireBatchLock('batch', 30000))) {
+        console.log('Could not acquire batch lock, another process may be handling the batch');
+        return;
+    }
 
     try {
         state.isProcessing = true;

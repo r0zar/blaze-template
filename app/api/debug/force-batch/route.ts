@@ -87,7 +87,7 @@ async function processBatch() {
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: trimStatus({
                 state: 'processing',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet,
                 txQueue: queue
             }),
             time: new Date().toISOString(),
@@ -98,16 +98,11 @@ async function processBatch() {
         // Process batch with all transactions in queue
         const batchSize = queue.length;
         console.log(`Mining block with ${batchSize} transactions...`);
-        await subnet.mineBlock(batchSize);
+        const result = await subnet.mineBlock(batchSize);
 
-        // Update state and last batch time
-        if (typeof subnet.refreshBalances === 'function') {
-            await subnet.refreshBalances();
-        }
         await kvStore.setLastBatchTime(Date.now());
 
         // Get updated state
-        const balances = await subnet.getBalances();
         const newQueue = subnet.mempool ? await subnet.mempool.getQueue() : [];
 
         // First update the queue state
@@ -121,18 +116,19 @@ async function processBatch() {
             batchSize,
             timestamp: Date.now(),
             success: true,
-            text: `${batchSize} transactions have been mined in a block and settled on-chain`,
+            result,
+            text: `${batchSize} transactions have been mined in a block and broadcast on-chain`,
             queue: trimQueue(newQueue)
         });
 
         // Update balances
-        await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.BALANCE_UPDATES, balances);
+        // await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.BALANCE_UPDATES, balances);
 
         // Finally update status
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: trimStatus({
                 state: 'idle',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet,
                 txQueue: newQueue
             }),
             time: new Date().toISOString(),
@@ -148,7 +144,7 @@ async function processBatch() {
             queue: trimQueue(newQueue),
             status: trimStatus({
                 state: 'idle',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet,
                 txQueue: newQueue
             })
         };
@@ -161,7 +157,7 @@ async function processBatch() {
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: trimStatus({
                 state: 'error',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet,
                 txQueue: currentQueue
             }),
             time: new Date().toISOString(),
