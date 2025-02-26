@@ -27,7 +27,7 @@ if (!packageJson.pnpm.overrides) {
 }
 
 // Add the local SDK override
-packageJson.pnpm.overrides['blaze-sdk'] = 'link:../../blaze';
+packageJson.pnpm.overrides['blaze-sdk'] = 'link:../blaze';
 
 // Store the original version in a custom field for unlink script
 packageJson._originalSdkVersion = currentVersion;

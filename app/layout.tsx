@@ -4,6 +4,8 @@ import "./globals.css";
 import "./tour.css";
 import FloatingElements from "@/components/FloatingElements";
 import NavButton from "@/components/NavButton";
+import { Providers } from './providers'
+import { Toaster } from 'react-hot-toast'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,9 +52,13 @@ export default function RootLayout({
         <NavButton />
 
         <div className="relative z-0">
-          {children}
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
         </div>
       </body>
     </html>
   );
 }
+

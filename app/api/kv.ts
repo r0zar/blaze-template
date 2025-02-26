@@ -89,27 +89,18 @@ export async function decrementBatchTime(): Promise<number> {
 }
 
 /**
- * Get timestamp of last batch processing
+ * Get the timestamp of the last processed batch
  */
 export async function getLastBatchTime(): Promise<number> {
-    try {
-        const value = await kv.get<number>(KV_LAST_BATCH_TIME);
-        return value !== null ? value : Date.now();
-    } catch (error) {
-        console.error('Error getting last batch time from KV:', error);
-        return Date.now();
-    }
+    const time = await kv.get(KV_LAST_BATCH_TIME);
+    return time ? Number(time) : 0;
 }
 
 /**
- * Update the last batch processing timestamp
+ * Set the timestamp of the last processed batch
  */
-export async function updateLastBatchTime(): Promise<void> {
-    try {
-        await kv.set(KV_LAST_BATCH_TIME, Date.now());
-    } catch (error) {
-        console.error('Error updating last batch time in KV:', error);
-    }
+export async function setLastBatchTime(time: number): Promise<void> {
+    await kv.set(KV_LAST_BATCH_TIME, String(time));
 }
 
 /**
@@ -159,7 +150,7 @@ export async function resetBatchTimer(): Promise<void> {
             await kv.set(KV_NEXT_BATCH_TIME, DEFAULT_BATCH_TIME);
 
             // Update the last batch time
-            await updateLastBatchTime();
+            await setLastBatchTime(Date.now());
 
             // Verify the timer was reset properly
             const newTimer = await getNextBatchTime();

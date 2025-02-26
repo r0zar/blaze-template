@@ -1,5 +1,6 @@
 import { Footer } from '@/components/Footer';
 import ActionButtons from "@/components/ActionButton";
+import Debug from "./components/Debug";
 import { BookOpen, Github, CircleDollarSign, Code, Flame, ExternalLink } from "lucide-react";
 import ExplorerLink from '@/components/ExplorerLink';
 import Link from 'next/link';
@@ -104,7 +105,7 @@ export default function Home() {
                 <p className="text-gray-600 dark:text-gray-400 mb-2">
                   View the Blaze subnet contract on the Stacks blockchain explorer.
                 </p>
-                <div className="font-mono text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 px-3 py-2 rounded-lg mb-4 md:mb-0">
+                <div className="hidden sm:block font-mono text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 px-3 py-2 rounded-lg mb-4 md:mb-0">
                   SP2ZNGJ85ENDY6QRHQ5P2D4FXKGZWCKTB2T0Z55KS.blaze-welsh-v0
                 </div>
               </div>
@@ -123,6 +124,9 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {/* Debug Section */}
+          <Debug />
 
           <div className="mb-6">
             <h2 className="text-3xl font-bold mb-2">Try It Now</h2>
