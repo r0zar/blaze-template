@@ -87,7 +87,7 @@ export async function GET(request: Request) {
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: {
                 state: subnet.getStatus?.() || 'online',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet,
                 txQueue: [],
                 lastProcessedBlock: null
             },
@@ -116,7 +116,7 @@ export async function GET(request: Request) {
                     await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
                         status: {
                             state: subnet.getStatus?.() || 'online',
-                            subnet: subnet.signer || null,
+                            subnet: subnet.subnet,
                             txQueue: newState.queue,
                             lastProcessedBlock: null
                         },

@@ -21,7 +21,7 @@ async function processBatch() {
             await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
                 status: trimStatus({
                     state: 'idle',
-                    subnet: subnet.signer || null,
+                    subnet: subnet.subnet,
                     txQueue: []
                 }),
                 time: new Date().toISOString(),
@@ -41,7 +41,7 @@ async function processBatch() {
             await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
                 status: trimStatus({
                     state: 'processing',
-                    subnet: subnet.signer || null,
+                    subnet: subnet.subnet,
                     txQueue: queue
                 }),
                 time: new Date().toISOString(),
@@ -60,7 +60,7 @@ async function processBatch() {
             await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
                 status: trimStatus({
                     state: 'error',
-                    subnet: subnet.signer || null,
+                    subnet: subnet.subnet,
                     txQueue: queue
                 }),
                 time: new Date().toISOString(),

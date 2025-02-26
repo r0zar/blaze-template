@@ -15,7 +15,7 @@ export async function POST() {
             await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
                 status: trimStatus({
                     state: 'error',
-                    subnet: subnet.signer || null,
+                    subnet: subnet.subnet,
                     txQueue: []
                 }),
                 time: new Date().toISOString(),
@@ -48,7 +48,7 @@ export async function POST() {
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: trimStatus({
                 state: 'idle',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet,
                 txQueue: newQueue
             }),
             time: new Date().toISOString(),
@@ -68,7 +68,7 @@ export async function POST() {
             queue: trimQueue(newQueue),
             status: trimStatus({
                 state: 'idle',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet,
                 txQueue: newQueue
             })
         });
@@ -81,7 +81,7 @@ export async function POST() {
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: trimStatus({
                 state: 'error',
-                subnet: subnet.signer || null,
+                subnet: subnet.subnet,
                 txQueue: currentQueue
             }),
             time: new Date().toISOString(),
