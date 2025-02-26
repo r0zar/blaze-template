@@ -139,6 +139,7 @@ async function processBatch() {
         console.log(`Successfully processed batch of ${batchSize} transactions`);
         return {
             success: true,
+            result,
             batchSize,
             message: `Successfully processed batch of ${batchSize} transactions`,
             queue: trimQueue(newQueue),

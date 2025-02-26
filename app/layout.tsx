@@ -5,7 +5,6 @@ import "./tour.css";
 import FloatingElements from "@/components/FloatingElements";
 import NavButton from "@/components/NavButton";
 import { Providers } from './providers'
-import { Toaster } from 'react-hot-toast'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,7 +43,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-gradient-to-b from-background to-background/90 relative overflow-x-hidden`}
       >
-        <div className="mesh-gradient fixed inset-0 -z-10 opacity-10" />
+        {/* Background Mesh Gradient Filter */}
+        <div className="mesh-gradient fixed inset-0 -z-10 opacity-5" />
+
         {/* Floating Elements with transaction success state */}
         <FloatingElements />
 
@@ -54,7 +55,6 @@ export default function RootLayout({
         <div className="relative z-0">
           <Providers>
             {children}
-            <Toaster />
           </Providers>
         </div>
       </body>

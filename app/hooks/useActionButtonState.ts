@@ -22,10 +22,8 @@ export interface BatchInfo {
 export interface ActionButtonState {
     txRequests: Transaction[];
     balances: Record<string, number>;
-    message: string | null;
-    messageTitle: string | null;
     isLoading: boolean;
-    isSettling: boolean;
+    isMining: boolean;
     lastBatch: {
         batchSize: number;
         timestamp: number;
@@ -43,8 +41,6 @@ export interface ActionButtonState {
 
 // Add this interface to define the shape of actions
 interface ActionButtonActions {
-    setMessage: (message: string | null) => void;
-    setMessageTitle: (title: string | null) => void;
     setSelectedTargetAddress: (address: string | null) => void;
     triggerSuccessAnimation: () => void;
     handlePendingBalanceChange: (address: string) => void;
@@ -54,7 +50,7 @@ interface ActionButtonActions {
     refreshBlockchainData: () => Promise<void>;
     setBalances: (balances: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => void;
     setTxRequests: (txs: Transaction[]) => void;
-    setIsSettling: (isSettling: boolean) => void;
+    setIsMining: (isMining: boolean) => void;
     setLastBatch: (settlement: { batchSize: number; timestamp: number; txId?: string; } | null) => void;
     setIsLoading: (loading: boolean) => void;
     setIsWalletConnected: (connected: boolean) => void;
@@ -67,10 +63,8 @@ interface ActionButtonActions {
 export function useActionButtonState() {
     const [txRequests, setTxRequests] = useState<Transaction[]>([]);
     const [balances, setBalances] = useState<Record<string, number>>({});  // Start with empty balances
-    const [message, setMessage] = useState<string | null>(null);
-    const [messageTitle, setMessageTitle] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isSettling, setIsSettling] = useState(false);
+    const [isMining, setIsMining] = useState(false);
     const [lastBatch, setLastBatch] = useState<{
         batchSize: number;
         timestamp: number;
@@ -172,29 +166,13 @@ export function useActionButtonState() {
         }
     }, [pusherQueue]);
 
-    // // Update status and settling state
-    // useEffect(() => {
-    //     if (pusherStatus) {
-    //         console.log('Pusher status update:', pusherStatus);
-    //         if (typeof pusherStatus === 'object' && pusherStatus !== null) {
-    //             const statusObj = pusherStatus as Status;
-    //             const newIsSettling = statusObj.subnet === 'processing' || (statusObj.txQueue && statusObj.txQueue.length > 0);
-    //             console.log(`Setting isSettling to ${newIsSettling} based on status update`);
-    //             setIsSettling(newIsSettling);
-    //         } else {
-    //             console.log(`Setting isSettling to ${pusherStatus === 'processing'} based on status update`);
-    //             setIsSettling(pusherStatus === 'processing');
-    //         }
-    //     }
-    // }, [pusherStatus]);
-
     // Update last settlement info when batch is processed
     useEffect(() => {
         if (pusherLastBatchInfo) {
             console.log('Batch processed:', pusherLastBatchInfo);
 
             // When a batch is processed, we want to reset the settling state
-            setIsSettling(false);
+            setIsMining(false);
 
             // Set the last settlement info with proper timestamp handling
             const timestamp = pusherLastBatchInfo.timestamp
@@ -205,12 +183,6 @@ export function useActionButtonState() {
             const txId = pusherLastBatchInfo.result.txid;
 
             setLastBatch({ batchSize, timestamp, txId });
-
-            // Show a success message
-            toast.success('Transaction batch successfully mined!', {
-                position: "bottom-center",
-                duration: 3000
-            });
 
             // Refresh the transaction requests
             setTxRequests(pusherQueue);
@@ -247,15 +219,15 @@ export function useActionButtonState() {
         // If connection state changes, update UI message accordingly
         if (connectionState !== 'connected' && connectionState !== 'initializing' && connectionState !== 'connecting') {
             if (connectionState === 'error') {
-                setMessageTitle('Connection Error');
-                setMessage('Unable to connect to the blockchain service');
-                // Keep message visible for connection errors
+                toast.error('Unable to connect to the blockchain service', {
+                    id: 'connection-error',
+                    duration: 5000
+                });
             } else if (connectionState === 'disconnected') {
-                setMessageTitle('Disconnected');
-                setMessage('Lost connection to blockchain service. Reconnecting...');
-                // Auto-dismiss after 10 seconds
-                const timeoutId = setTimeout(() => setMessage(null), 10000);
-                return () => clearTimeout(timeoutId);
+                toast.error('Lost connection to blockchain service. Reconnecting...', {
+                    id: 'disconnected',
+                    duration: 10000
+                });
             }
         }
     }, [pusherLoading, connectionState]);
@@ -351,9 +323,10 @@ export function useActionButtonState() {
             return;
         }
         setSelectedTargetAddress(address);
-        setMessage(`Selected ${formatAddress(address)} as transfer target`);
-        setMessageTitle(`Transfer target updated`);
-        setTimeout(() => setMessage(null), 3000);
+        toast.success(`Selected ${formatAddress(address)} as transfer target`, {
+            id: 'target-updated',
+            duration: 3000
+        });
     };
 
     const getRandomTargetAddress = () => {
@@ -368,9 +341,10 @@ export function useActionButtonState() {
         const randomIndex = Math.floor(Math.random() * availableAddresses.length);
         const randomAddress = availableAddresses[randomIndex];
 
-        setMessageTitle("Random target selected");
-        setMessage(`Randomly selected ${formatAddress(randomAddress)} as transfer target`);
-        setTimeout(() => setMessage(null), 3000);
+        toast.success(`Randomly selected ${formatAddress(randomAddress)} as transfer target`, {
+            id: 'random-target',
+            duration: 3000
+        });
 
         return randomAddress;
     };
@@ -397,9 +371,10 @@ export function useActionButtonState() {
                 const address = blaze.getWalletAddress();
                 blaze.disconnectWallet();
                 setIsWalletConnected(false);
-                setMessage("Wallet disconnected successfully");
-                setMessageTitle("Wallet disconnected");
-                setTimeout(() => setMessage(null), 5000);
+                toast.success("Wallet disconnected successfully", {
+                    id: 'wallet-disconnected',
+                    duration: 5000
+                });
 
                 try {
                     await fetch('/api/wallet/track', {
@@ -418,9 +393,10 @@ export function useActionButtonState() {
                     const address = await blaze.connectWallet();
                     if (address) {
                         setIsWalletConnected(true);
-                        setMessage("Wallet connected successfully");
-                        setMessageTitle("Wallet connected");
-                        setTimeout(() => setMessage(null), 5000);
+                        toast.success("Wallet connected successfully", {
+                            id: 'wallet-connected',
+                            duration: 5000
+                        });
 
                         setBalances((prevBalances) => {
                             const updatedBalances = { ...prevBalances };
@@ -447,17 +423,23 @@ export function useActionButtonState() {
                             // Error handling is done via UI messages
                         }
                     } else {
-                        setMessageTitle("Connection Error");
-                        setMessage("Failed to connect wallet - no address returned");
+                        toast.error("Failed to connect wallet - no address returned", {
+                            id: 'connect-error',
+                            duration: 5000
+                        });
                     }
                 } catch {
-                    setMessageTitle("Wallet Connection Error");
-                    setMessage("Failed to connect wallet. Please try again.");
+                    toast.error("Failed to connect wallet. Please try again.", {
+                        id: 'wallet-connection-error',
+                        duration: 5000
+                    });
                 }
             }
         } catch {
-            setMessageTitle("Wallet Error");
-            setMessage("An unexpected error occurred with your wallet.");
+            toast.error("An unexpected error occurred with your wallet.", {
+                id: 'wallet-error',
+                duration: 5000
+            });
         }
     };
 
@@ -486,10 +468,8 @@ export function useActionButtonState() {
         state: {
             txRequests,
             balances,
-            message,
-            messageTitle,
             isLoading,
-            isSettling,
+            isMining,
             lastBatch,
             transactionCounter,
             isWalletConnected,
@@ -501,8 +481,6 @@ export function useActionButtonState() {
             isRefreshing
         },
         actions: {
-            setMessage,
-            setMessageTitle,
             setSelectedTargetAddress,
             triggerSuccessAnimation,
             handlePendingBalanceChange,
@@ -512,7 +490,7 @@ export function useActionButtonState() {
             refreshBlockchainData,
             setBalances,
             setTxRequests,
-            setIsSettling,
+            setIsMining,
             setLastBatch,
             setIsLoading,
             setIsWalletConnected,

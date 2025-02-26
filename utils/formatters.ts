@@ -25,17 +25,17 @@ export const formatAddress = (address: string): string => {
 
 /**
  * Get status text based on current state
- * @param isSettling Whether a batch is currently being settled
+ * @param isMining Whether a batch is currently being settled
  * @param lastBatch Information about the last settlement
  * @param txRequestsLength Number of pending transactions
  * @returns Status text to display
  */
 export const getStatusText = (
-    isSettling: boolean,
+    isMining: boolean,
     lastBatch: { batchSize: number; timestamp: number; txId?: string; } | null,
     txRequestsLength: number
 ): string => {
-    if (isSettling) return 'Mining transaction batch...';
+    if (isMining) return 'Mining transaction batch...';
     if (lastBatch && Date.now() - lastBatch.timestamp < 2000) {
         return `Mined batch of ${lastBatch.batchSize} transactions`;
     }
@@ -44,16 +44,16 @@ export const getStatusText = (
 
 /**
  * Get CSS classes for the status pill based on current state
- * @param isSettling Whether a batch is currently being settled
+ * @param isMining Whether a batch is currently being settled
  * @param lastBatch Information about the last settlement
  * @returns CSS classes for the status pill
  */
 export const getPillClasses = (
-    isSettling: boolean,
+    isMining: boolean,
     lastBatch: { batchSize: number; timestamp: number; txId?: string; } | null
 ): string => {
     const baseClasses = 'px-3 py-1 rounded-full';
-    if (isSettling) {
+    if (isMining) {
         return `${baseClasses} bg-yellow-200/50 dark:bg-yellow-800/30 border border-yellow-300 dark:border-yellow-700`;
     }
     if (lastBatch && Date.now() - lastBatch.timestamp < 2000) {
@@ -64,17 +64,17 @@ export const getPillClasses = (
 
 /**
  * Get CSS classes for the status indicator based on current state
- * @param isSettling Whether a batch is currently being settled
+ * @param isMining Whether a batch is currently being settled
  * @param lastBatch Information about the last settlement
  * @param txRequestsLength Number of pending transactions
  * @returns CSS classes for the status indicator
  */
 export const getIndicatorClasses = (
-    isSettling: boolean,
+    isMining: boolean,
     lastBatch: { batchSize: number; timestamp: number; txId?: string; } | null,
     txRequestsLength: number
 ): string => {
-    if (isSettling) {
+    if (isMining) {
         return 'bg-yellow-600 animate-ping';
     }
     if (lastBatch && Date.now() - lastBatch.timestamp < 2000) {

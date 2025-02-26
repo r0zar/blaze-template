@@ -24,97 +24,6 @@ function ActionButtons() {
 
     return (
         <div className="max-w-screen-2xl mx-auto">
-
-            {/* DEV ONLY: Pusher status indicator */}
-            {process.env.NODE_ENV === 'development' && (
-                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-xs">
-                    <div className="flex justify-between items-center mb-1">
-                        <h3 className="font-semibold text-blue-800 dark:text-blue-300">Pusher Status</h3>
-                        <button
-                            onClick={actions.refreshBlockchainData}
-                            className="px-2 py-1 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-300 rounded text-xs flex items-center gap-1 transition-colors"
-                            disabled={state.isRefreshing}
-                        >
-                            {state.isRefreshing ? (
-                                <>
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                    <span>Refreshing...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <ArrowRightLeft className="w-3 h-3" />
-                                    <span>Refresh Data</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
-                    <div className="text-blue-700 dark:text-blue-400 grid grid-cols-2 gap-1">
-                        <div>Loading: {state.isLoading ? '✓' : '✗'}</div>
-                        <div>Status: {typeof state.pusherStatus === 'object'
-                            ? `Object with ${Object.keys(state.pusherStatus || {}).length} keys`
-                            : String(state.pusherStatus || 'N/A')}</div>
-                        <div>Balances: {state.balances ? Object.keys(state.balances).length : 0} addresses</div>
-                        <div>Queue: {state.txRequests?.length || 0} transactions</div>
-                        <div>Last Batch: {state.lastBatch ? `${state.lastBatch.batchSize} tx` : 'N/A'}</div>
-                        <div className="flex items-center">
-                            <div className={`w-2 h-2 rounded-full mr-1 ${state.connectionState === 'connected' ? 'bg-green-500' :
-                                state.connectionState === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                                    state.connectionState === 'error' ? 'bg-red-500' :
-                                        'bg-gray-500'
-                                }`} />
-                            {state.connectionState === 'connected' ? 'Connected' :
-                                state.connectionState === 'connecting' ? 'Connecting...' :
-                                    state.connectionState === 'error' ? 'Connection Error' :
-                                        state.connectionState === 'disconnected' ? 'Disconnected' :
-                                            'Initializing...'}
-                        </div>
-                    </div>
-
-                    {/* Display status object properties if available */}
-                    {typeof state.pusherStatus === 'object' && state.pusherStatus !== null && (
-                        <div className="mt-2 border-t border-blue-200 dark:border-blue-800 pt-2">
-                            <h4 className="font-semibold text-blue-800 dark:text-blue-300 text-xs mb-1">Status Details:</h4>
-                            <div className="text-blue-700 dark:text-blue-400 grid grid-cols-1 gap-1">
-                                {Object.entries(state.pusherStatus).map(([key, value]) => (
-                                    <div key={key} className="text-xs">
-                                        {key}: {typeof value === 'object'
-                                            ? `${Array.isArray(value) ? value.length + ' items' : JSON.stringify(value).substring(0, 30) + '...'}`
-                                            : String(value)}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Toast Message */}
-            <AnimatePresence>
-                {state.message && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="fixed top-2 right-2 sm:top-10 sm:right-16 z-50 min-w-[300px] max-w-[90vw]"
-                    >
-                        <div className="relative backdrop-blur-xl">
-                            <div className="absolute inset-0 bg-black/5  rounded-xl" />
-                            <div className="p-4 bg-gradient-to-r from-yellow-50/80 via-yellow-50/80 to-yellow-50/80 dark:from-yellow-900/30 dark:via-yellow-900/20 dark:to-yellow-900/10 rounded-xl text-sm shadow-lg border border-yellow-200 dark:border-yellow-800 relative text-center">
-                                <div className="flex items-center justify-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-100 via-yellow-100 to-yellow-100/50 dark:from-yellow-900/70 dark:via-yellow-900/50 dark:to-yellow-900/30 flex items-center justify-center">
-                                        <ArrowRightLeft className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-                                    </div>
-                                    <div>
-                                        <div className="font-medium text-yellow-900 dark:text-yellow-100 text-left">{state.messageTitle}</div>
-                                        <div className="text-yellow-600/80 dark:text-yellow-300/80">{state.message}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             {/* Balances Section */}
             <div className="mb-12 p-6 rounded-xl bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-800 backdrop-blur-sm relative z-10" data-tour="balances-section">
                 <div className="flex items-center justify-between mb-6">
@@ -267,11 +176,11 @@ function ActionButtons() {
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
                         <h3 className="text-xl font-semibold">Recent Transactions</h3>
-                        <div className={`flex items-center gap-2 ${getPillClasses(state.isSettling, state.lastBatch)}`} data-tour="batch-status">
-                            <div className={`w-2 h-2 rounded-full ${getIndicatorClasses(state.isSettling, state.lastBatch, state.txRequests.length)}`} />
+                        <div className={`flex items-center gap-2 ${getPillClasses(state.isMining, state.lastBatch)}`} data-tour="batch-status">
+                            <div className={`w-2 h-2 rounded-full ${getIndicatorClasses(state.isMining, state.lastBatch, state.txRequests.length)}`} />
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                 {state.connectionState === 'connected' ?
-                                    getStatusText(state.isSettling, state.lastBatch, state.txRequests.length) :
+                                    getStatusText(state.isMining, state.lastBatch, state.txRequests.length) :
                                     state.connectionState === 'connecting' ? 'Connecting...' :
                                         state.connectionState === 'error' ? 'Connection Error' :
                                             state.connectionState === 'disconnected' ? 'Disconnected' :

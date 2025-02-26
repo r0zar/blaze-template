@@ -83,7 +83,7 @@ export const tourSteps = [
     // Step 8: Explorer Links
     {
         target: '[data-tour="explorer-link"]',
-        title: 'Blockchain Explorer',
+        title: 'Blaze Explorer',
         content: 'View transaction details on the blockchain explorer. This provides transparency and verification for all operations.',
         placement: 'left',
     },
