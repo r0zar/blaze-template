@@ -38,8 +38,6 @@ interface UserProfile {
   points?: number;
 }
 
-
-
 export const metadata: Metadata = {
   title: "Blaze | Chatroom",
   description: "Chat with other users in the Blaze chatroom. Tip others to earn points and climb the ranks.",
@@ -47,6 +45,13 @@ export const metadata: Metadata = {
     title: "Blaze | Chatroom",
     description: "Chat with other users in the Blaze chatroom. Tip others to earn points and climb the ranks.",
     type: "website",
+    images: [
+      {
+        url: "/chatroom.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
   },
 };
 
