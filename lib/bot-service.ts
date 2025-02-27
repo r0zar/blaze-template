@@ -24,6 +24,7 @@ export class ChatBot {
     }
 
     static async processMessage(message: Message): Promise<BotResponse | null> {
+        return null;
         // Add message to history
         this.addToHistory(message);
 
