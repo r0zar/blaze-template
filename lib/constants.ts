@@ -1,4 +1,5 @@
-// Event names - shared between client and server
+// Blockchain events
+export const BLOCKCHAIN_CHANNEL = 'blockchain';
 export const EVENTS = {
     BALANCE_UPDATES: 'balance-updates',
     TRANSACTION_ADDED: 'transaction-added',
@@ -6,9 +7,14 @@ export const EVENTS = {
     STATUS_UPDATE: 'status-update'
 } as const;
 
-// Channel name - shared between client and server
-export const BLOCKCHAIN_CHANNEL = 'blockchain-main';
+// Chatroom constants
+export const CHATROOM = {
+    CHANNEL: 'presence-chatroom',
+    EVENTS: {
+        MESSAGE_SENT: 'message-sent',
+        TIP_SENT: 'tip-sent',
+        TRANSFER_REQUEST: 'transfer-request'
+    }
+} as const;
 
-// Export types for TypeScript
-export type EventType = keyof typeof EVENTS;
-export type EventName = typeof EVENTS[EventType]; 
+export type EventName = typeof EVENTS[keyof typeof EVENTS]; 

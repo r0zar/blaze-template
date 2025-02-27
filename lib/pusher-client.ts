@@ -1,13 +1,21 @@
 'use client';
 
-import PusherClient from 'pusher-js';
-import { EVENTS, BLOCKCHAIN_CHANNEL } from './constants';
+import PusherClient, { PresenceChannel } from 'pusher-js';
+import { EVENTS, BLOCKCHAIN_CHANNEL, CHATROOM } from './constants';
+import blaze from 'blaze-sdk';
 
 // Detect browser environment
 const isBrowser = typeof window !== 'undefined';
 
 // Pusher client singleton
 let pusherClient: PusherClient | null = null;
+
+// User info interface for presence channels
+export interface UserInfo {
+    nickname: string;
+    totalTips: number;
+    joined: number;
+}
 
 // Event handler types
 export interface BalanceUpdate {
@@ -45,6 +53,43 @@ export interface TransactionUpdate {
     queue: any[];
 }
 
+export interface Message {
+    id: string;
+    address: string;
+    nickname: string;
+    content: string;
+    timestamp: number;
+    tips: number;
+}
+
+export interface TipEvent {
+    messageId: string;
+    senderAddress: string;
+    recipientAddress: string;
+    timestamp: number;
+}
+
+export interface Member {
+    id: string;
+    info: {
+        nickname: string;
+        totalTips: number;
+        joined: number;
+    };
+}
+
+export interface ChatroomEventHandlers {
+    onMessageReceived?: (data: Message) => void;
+    onTipReceived?: (data: TipEvent) => void;
+    onMemberAdded?: (member: Member) => void;
+    onMemberRemoved?: (member: Member) => void;
+    onSubscriptionSucceeded?: (members: { [userId: string]: Member }) => void;
+    onConnect?: () => void;
+    onDisconnect?: () => void;
+    onError?: (error: Error) => void;
+    userInfo: UserInfo;
+}
+
 export interface BlazeEventHandlers {
     onBalanceUpdates?: (data: BalanceUpdate) => void;
     onTransactionAdded?: (data: TransactionUpdate) => void;
@@ -59,68 +104,45 @@ export interface BlazeEventHandlers {
  * Initialize Pusher client for browser environment
  * Returns existing client if already initialized
  */
-export function initPusherClient(): PusherClient | null {
-    // Only run in browser environment
+export function initPusherClient(userInfo: UserInfo): PusherClient | null {
     if (!isBrowser) return null;
 
-    // Return existing instance if already initialized
-    if (pusherClient) {
-        // If client exists but is disconnected, reconnect
-        if (pusherClient.connection.state !== 'connected') {
-            console.log('Pusher client exists but not connected, reconnecting...');
-            pusherClient.connect();
-        }
-        return pusherClient;
-    }
-
-    // Check if configuration is available in the environment
-    // Make sure we're using the NEXT_PUBLIC_ prefixed variables
-    const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
-    const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
-
-    if (!key || !cluster) {
-        console.warn('Pusher client configuration is missing. Real-time updates will not be available.');
-        // Optionally fall back to fetching from API
-        fetchConfigAndInitialize();
+    // Validate user info
+    if (!userInfo || !userInfo.nickname) {
+        console.error('Invalid user info:', userInfo);
         return null;
     }
 
-    // Initialize new Pusher client with optimized settings
+    console.log('Initializing Pusher client with user info:', userInfo);
+
+    // Return existing client if already initialized
+    if (pusherClient) {
+        console.log('Returning existing Pusher client');
+        return pusherClient;
+    }
+
+    const currentAddress = blaze.getWalletAddress();
+    console.log('Current wallet address:', currentAddress);
+
     try {
-        // Reduce timeouts for faster reconnection
-        pusherClient = new PusherClient(key, {
-            cluster,
-            enabledTransports: ['ws', 'wss'],
-            activityTimeout: 15000,      // 15 seconds (default is 120s)
-            pongTimeout: 10000,          // 10 seconds (default is 30s)
-            unavailableTimeout: 5000,    // 5 seconds (default is 15s)
-            wsHost: `ws-${cluster}.pusher.com`, // Explicitly set WebSocket host
-            forceTLS: true,              // Force TLS for security
-            enableStats: false,          // Disable stats for better performance
-            disableStats: true,          // Redundant but ensures stats are disabled
-        });
-
-        console.log('Pusher client initialized with optimized settings');
-
-        // Set up connection activity monitoring to save connections on free tier
-        setupActivityMonitoring(pusherClient);
-
-        // Add connection state logging
-        pusherClient.connection.bind('state_change', (states: { current: string, previous: string }) => {
-            console.log(`Pusher connection state changed from ${states.previous} to ${states.current}`);
-
-            // If disconnected, try to reconnect immediately
-            if (states.current === 'disconnected' || states.current === 'failed') {
-                console.log('Pusher disconnected, attempting immediate reconnection');
-                setTimeout(() => pusherClient?.connect(), 500);
+        pusherClient = new PusherClient(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+            cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+            authEndpoint: '/api/pusher/auth',
+            auth: {
+                params: {
+                    user_address: currentAddress,
+                    nickname: userInfo.nickname,
+                    total_tips: userInfo.totalTips || 0,
+                    joined: userInfo.joined || Date.now()
+                }
             }
         });
 
-        // Add error logging
-        pusherClient.connection.bind('error', (err: any) => {
-            console.error('Pusher connection error:', err);
-            // Try to reconnect on error
-            setTimeout(() => pusherClient?.connect(), 1000);
+        console.log('Pusher client initialized with auth params:', {
+            user_address: currentAddress,
+            nickname: userInfo.nickname,
+            total_tips: userInfo.totalTips || 0,
+            joined: userInfo.joined || Date.now()
         });
 
         return pusherClient;
@@ -209,8 +231,11 @@ export function subscribeToBlazeEvents(handlers: BlazeEventHandlers): () => void
     // Only run in browser environment
     if (!isBrowser) return () => { };
 
-    const pusher = initPusherClient();
-    if (!pusher) return () => { }; // Return no-op cleanup if client not available
+    // Initialize Pusher client without user info for blockchain events
+    const pusher = new PusherClient(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+        enabledTransports: ['ws', 'wss']
+    });
 
     // Force reconnect if not connected
     if (pusher.connection.state !== 'connected') {
@@ -271,5 +296,119 @@ export function subscribeToBlazeEvents(handlers: BlazeEventHandlers): () => void
         if (handlers.onDisconnect) pusher.connection.unbind('disconnected', handlers.onDisconnect);
         if (handlers.onError) pusher.connection.unbind('error', handlers.onError);
         pusher.unsubscribe(BLOCKCHAIN_CHANNEL);
+    };
+}
+
+/**
+ * Subscribe to the chatroom channel and register event handlers
+ */
+export function subscribeToChatroomEvents(handlers: ChatroomEventHandlers): () => void {
+    const pusher = initPusherClient(handlers.userInfo);
+
+    if (!pusher) return () => { }; // Return no-op cleanup if client not available
+
+    // Force reconnect if not connected
+    if (pusher.connection.state !== 'connected') {
+        console.log('Pusher not connected, connecting now...');
+        pusher.connect();
+    }
+
+    console.log('Current connection state:', pusher.connection.state);
+    console.log('Attempting to subscribe to channel:', CHATROOM.CHANNEL);
+
+    // Subscribe to the presence channel
+    const channel = pusher.subscribe(CHATROOM.CHANNEL) as PresenceChannel;
+    console.log('Subscribing to presence channel:', CHATROOM.CHANNEL);
+
+    // Log subscription process
+    channel.bind('pusher:subscription_pending', () => {
+        console.log('Subscription pending for channel:', CHATROOM.CHANNEL);
+    });
+
+    // Log all events for debugging
+    channel.bind_global((event: string, data: any) => {
+        console.log(`Received event ${event} on channel ${CHATROOM.CHANNEL}:`, data);
+    });
+
+    // Handle presence events
+    channel.bind('pusher:subscription_succeeded', (members: { [userId: string]: Member }) => {
+        console.log('Successfully subscribed to presence channel. Current members:', members);
+        console.log('Current member count:', Object.keys(members).length);
+        if (handlers.onSubscriptionSucceeded) {
+            handlers.onSubscriptionSucceeded(members);
+        }
+    });
+
+    channel.bind('pusher:subscription_error', (error: any) => {
+        console.error('Failed to subscribe to presence channel:', error);
+        console.error('Channel:', CHATROOM.CHANNEL);
+        console.error('Connection state:', pusher.connection.state);
+        if (handlers.onError) {
+            handlers.onError(new Error('Failed to subscribe to presence channel: ' + JSON.stringify(error)));
+        }
+    });
+
+    if (handlers.onMemberAdded) {
+        channel.bind('pusher:member_added', (member: Member) => {
+            console.log('Member added to channel:', member);
+            console.log('Member info:', member.info);
+            handlers.onMemberAdded!(member);
+        });
+    }
+
+    if (handlers.onMemberRemoved) {
+        channel.bind('pusher:member_removed', (member: Member) => {
+            console.log('Member removed from channel:', member);
+            handlers.onMemberRemoved!(member);
+        });
+    }
+
+    // Register message event handler
+    if (handlers.onMessageReceived) {
+        console.log('Binding message event handler for:', CHATROOM.EVENTS.MESSAGE_SENT);
+        channel.bind(CHATROOM.EVENTS.MESSAGE_SENT, (data: Message) => {
+            console.log('Received message event:', data);
+            handlers.onMessageReceived!(data);
+        });
+    }
+
+    // Register tip event handler
+    if (handlers.onTipReceived) {
+        channel.bind(CHATROOM.EVENTS.TIP_SENT, (data: TipEvent) => {
+            console.log('Received tip event:', data);
+            handlers.onTipReceived!(data);
+        });
+    }
+
+    // Add connection state handlers
+    if (handlers.onConnect) {
+        pusher.connection.bind('connected', () => {
+            console.log('Connection established');
+            handlers.onConnect!();
+        });
+    }
+
+    if (handlers.onDisconnect) {
+        pusher.connection.bind('disconnected', () => {
+            console.log('Connection lost');
+            if (handlers.onDisconnect) handlers.onDisconnect();
+        });
+    }
+
+    if (handlers.onError) {
+        pusher.connection.bind('error', (error: Error) => {
+            console.error('Connection error:', error);
+            handlers.onError!(error);
+        });
+    }
+
+    // Return cleanup function
+    return () => {
+        console.log('Cleaning up channel subscriptions');
+        channel.unbind_all();
+        if (handlers.onConnect) pusher.connection.unbind('connected', handlers.onConnect);
+        if (handlers.onDisconnect) pusher.connection.unbind('disconnected', handlers.onDisconnect);
+        if (handlers.onError) pusher.connection.unbind('error', handlers.onError);
+        pusher.unsubscribe(CHATROOM.CHANNEL);
     };
 } 

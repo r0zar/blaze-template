@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Flame, Menu, X, ExternalLink, BarChart2, Home, HelpCircle, Terminal } from 'lucide-react';
+import { Flame, Menu, X, ExternalLink, BarChart2, Home, HelpCircle, Terminal, MessageSquare } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useDeveloperMode } from '@/contexts/DeveloperMode';
 
@@ -63,6 +63,14 @@ export default function NavButton() {
                             >
                                 <BarChart2 className="w-4 h-4" />
                                 Transaction Explorer
+                            </Link>
+                            <Link
+                                href="/chatroom"
+                                className="block px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                <MessageSquare className="w-4 h-4" />
+                                Chatroom: Tip & Win
                             </Link>
                             <a
                                 href="https://explorer.hiro.so/txid/SP2ZNGJ85ENDY6QRHQ5P2D4FXKGZWCKTB2T0Z55KS.blaze-welsh-v0?chain=mainnet"

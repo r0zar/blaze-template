@@ -21,10 +21,32 @@ if (isPusherConfigured) {
         secret: process.env.PUSHER_SECRET!,
         cluster: process.env.PUSHER_CLUSTER!,
         useTLS: true,
+        encryptionMasterKeyBase64: process.env.PUSHER_ENCRYPTION_KEY
     });
     console.log('Pusher initialized successfully');
 } else {
     console.warn('Pusher is not configured. Real-time updates via Pusher will not be available.');
+}
+
+/**
+ * Authenticate a private or presence channel
+ */
+export function authenticateChannel(socketId: string, channel: string, presenceData?: any): any {
+    if (!pusher) {
+        console.warn('Pusher not configured, cannot authenticate channel');
+        return null;
+    }
+
+    try {
+        if (channel.startsWith('presence-')) {
+            return pusher.authorizeChannel(socketId, channel, presenceData);
+        } else if (channel.startsWith('private-')) {
+            return pusher.authorizeChannel(socketId, channel);
+        }
+    } catch (error) {
+        console.error('Error authenticating channel:', error);
+        return null;
+    }
 }
 
 /**

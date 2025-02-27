@@ -45,3 +45,13 @@ export const getStatusText = (
     }
     return txRequestsLength > 0 ? `${txRequestsLength} transactions pending` : 'No pending transactions';
 };
+
+/**
+ * Validates a Stacks address
+ * @param address The address to validate
+ * @returns boolean indicating if the address is valid
+ */
+export function isValidStacksAddress(address: string): boolean {
+    // Stacks addresses must start with 'S' and be 41 characters long
+    return address.startsWith('S') && address.length === 41;
+}

@@ -13,6 +13,7 @@
     "postinstall": "node -e \"try { require('fs').accessSync('./scripts/install-hooks.js', require('fs').constants.F_OK); require('./scripts/install-hooks.js'); } catch (e) {}\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.37.0",
     "@headlessui/react": "^2.2.0",
     "@vercel/kv": "^3.0.0",
     "blaze-sdk": "0.5.8",
@@ -24,13 +25,15 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
-    "react-joyride": "3.0.0-7"
+    "react-joyride": "3.0.0-7",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",
