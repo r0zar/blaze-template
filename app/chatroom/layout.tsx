@@ -17,11 +17,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ChatroomLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function ChatroomLayout({ children, }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       {children}

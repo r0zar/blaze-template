@@ -38,23 +38,6 @@ interface UserProfile {
   points?: number;
 }
 
-export const metadata: Metadata = {
-  title: "Blaze | Chatroom",
-  description: "Chat with other users in the Blaze chatroom. Tip others to earn points and climb the ranks.",
-  openGraph: {
-    title: "Blaze | Chatroom",
-    description: "Chat with other users in the Blaze chatroom. Tip others to earn points and climb the ranks.",
-    type: "website",
-    images: [
-      {
-        url: "/chatroom.png",
-        width: 1200,
-        height: 630,
-      },
-    ],
-  },
-};
-
 export default function ChatroomPage() {
   // Blaze context for wallet and balance
   const {
