@@ -12,13 +12,9 @@ export default function TransactionList() {
         selectedTargetAddress,
         txRequests,
         executeTransfer,
-        useLoadingResource,
         isMining,
         lastBatch
     } = useBlaze();
-
-    // Use the loading resource to trigger Suspense
-    useLoadingResource('transactions');
 
     // Check if the last batch had an error (no txId means it failed)
     const lastBatchFailed = lastBatch ? !lastBatch.txId : false;

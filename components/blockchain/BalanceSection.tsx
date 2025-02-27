@@ -39,17 +39,36 @@ export default function BalanceSection() {
         pendingBalanceChanges,
         txRequests,
         selectTargetAddress,
-        clearPendingBalanceChange,
-        useLoadingResource
+        clearPendingBalanceChange
     } = useBlaze();
 
-    // Use the loading resource to trigger Suspense
-    useLoadingResource('balances');
-
-    // If there are no balances, don't render anything
+    // If there are no balances, show a placeholder
     if (Object.keys(balances).length === 0) {
-        // This will cause React to suspend this component
-        throw new Promise((resolve) => setTimeout(resolve, 500));
+        return (
+            <div className="mb-12 p-6 rounded-xl bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-800 backdrop-blur-sm relative z-10">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-semibold">Subnet Balances</h2>
+                    <div className="flex items-center gap-3">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                            No Balances Available
+                        </div>
+                        <ClientExplorerLink
+                            variant="badge"
+                            size="sm"
+                            label="View Contract"
+                            data-tour="explorer-link"
+                        />
+                    </div>
+                </div>
+                <div className="p-6 text-center text-gray-500 dark:text-gray-400 border border-dashed border-gray-200 dark:border-gray-800 rounded-lg">
+                    <Wallet className="w-8 h-8 mx-auto opacity-50 mb-2" />
+                    <p>No balances found</p>
+                    <p className="text-xs mt-1">
+                        Connect your wallet or wait for balances to load
+                    </p>
+                </div>
+            </div>
+        );
     }
 
     return (
