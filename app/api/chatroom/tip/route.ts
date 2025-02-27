@@ -66,8 +66,8 @@ export async function POST(request: Request) {
 
     // Broadcast tip event
     await triggerPusherEvent(
-      CHATROOM_CHANNEL,
-      CHATROOM_EVENTS.TIP_SENT,
+      CHATROOM.CHANNEL,
+      CHATROOM.EVENTS.TIP_SENT,
       tipEvent
     );
 
