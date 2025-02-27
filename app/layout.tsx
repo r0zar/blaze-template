@@ -4,8 +4,9 @@ import "./globals.css";
 import "./tour.css";
 import FloatingElements from "@/components/FloatingElements";
 import NavButton from "@/components/NavButton";
-import { Providers } from './providers'
-import { DeveloperModeProvider } from './contexts/DeveloperModeContext';
+import { EventToaster } from '@/contexts/EventToaster'
+import { DeveloperMode } from "@/contexts/DeveloperMode";
+import { BlazeProvider } from "@/contexts/blaze/BlazeContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,19 +48,21 @@ export default function RootLayout({
         {/* Background Mesh Gradient Filter */}
         <div className="mesh-gradient fixed inset-0 -z-10 opacity-5" />
 
-        <DeveloperModeProvider>
-          {/* Floating Elements with transaction success state */}
-          <FloatingElements />
+        <BlazeProvider>
+          <DeveloperMode>
+            {/* Floating Elements with transaction success state */}
+            <FloatingElements />
 
-          {/* Navigation Menu */}
-          <NavButton />
+            {/* Navigation Menu */}
+            <NavButton />
 
-          <div className="relative z-0">
-            <Providers>
-              {children}
-            </Providers>
-          </div>
-        </DeveloperModeProvider>
+            <div className="relative z-0">
+              <EventToaster>
+                {children}
+              </EventToaster>
+            </div>
+          </DeveloperMode>
+        </BlazeProvider>
       </body>
     </html>
   );

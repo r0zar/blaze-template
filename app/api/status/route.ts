@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { subnet } from '../subnet';
+import { subnet } from '../../../lib/subnet';
 
 /**
  * Status API endpoint

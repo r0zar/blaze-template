@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { subnet } from '../../subnet';
-import * as kvStore from '../../kv';
+import { subnet } from '@/lib/subnet';
+import * as kvStore from '@/lib/kv';
 
 // Set Dynamic to avoid ISR caching
 export const dynamic = 'force-dynamic';

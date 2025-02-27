@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { subnet } from '../../subnet';
-import * as kvStore from '../../kv';
-import { triggerPusherEvent, BLOCKCHAIN_CHANNEL, EVENTS } from '../../pusher';
-import { trimQueue, trimStatus, trimBalances } from '../../../lib/utils';
+import { subnet } from '@/lib/subnet';
+import * as kvStore from '@/lib/kv';
+import { triggerPusherEvent, BLOCKCHAIN_CHANNEL, EVENTS } from '@/lib/pusher';
+import { trimQueue, trimStatus, trimBalances } from '@/lib/utils';
 
 // Set Dynamic to avoid ISR caching
 export const dynamic = 'force-dynamic';
@@ -99,11 +99,15 @@ async function processBatch() {
         const batchSize = queue.length;
         console.log(`Mining block with ${batchSize} transactions...`);
         const result = await subnet.mineBlock(batchSize);
+        console.log({ result });
 
         await kvStore.setLastBatchTime(Date.now());
 
         // Get updated state
         const newQueue = subnet.mempool ? await subnet.mempool.getQueue() : [];
+
+        // Check if the result contains an error
+        const isSuccess = result && !('error' in result && 'reason' in result);
 
         // First update the queue state
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.TRANSACTION_ADDED, {
@@ -115,9 +119,11 @@ async function processBatch() {
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.BATCH_PROCESSED, {
             batchSize,
             timestamp: Date.now(),
-            success: true,
+            success: isSuccess,
             result,
-            text: `${batchSize} transactions have been mined in a block and broadcast on-chain`,
+            text: isSuccess
+                ? `${batchSize} transactions have been mined in a block and broadcast on-chain`
+                : `Transaction batch failed: ${result?.error || 'Unknown error'}${result?.reason ? ` - ${result.reason}` : ''}`,
             queue: trimQueue(newQueue)
         });
 
@@ -127,24 +133,27 @@ async function processBatch() {
         // Finally update status
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: trimStatus({
-                state: 'idle',
+                state: isSuccess ? 'idle' : 'error',
                 subnet: subnet.subnet,
                 txQueue: newQueue
             }),
             time: new Date().toISOString(),
-            message: 'Batch processing complete',
-            queue: trimQueue(newQueue)
+            message: isSuccess ? 'Batch processing complete' : `Batch processing failed: ${result?.error || 'Unknown error'}`,
+            queue: trimQueue(newQueue),
+            error: isSuccess ? undefined : (result?.error || 'Unknown error')
         });
 
-        console.log(`Successfully processed batch of ${batchSize} transactions`);
+        console.log(`Batch processing ${isSuccess ? 'successful' : 'failed'}: ${isSuccess ? result?.txid : result?.error}`);
         return {
-            success: true,
+            success: isSuccess,
             result,
             batchSize,
-            message: `Successfully processed batch of ${batchSize} transactions`,
+            message: isSuccess
+                ? `Successfully processed batch of ${batchSize} transactions`
+                : `Batch processing failed: ${result?.error || 'Unknown error'}`,
             queue: trimQueue(newQueue),
             status: trimStatus({
-                state: 'idle',
+                state: isSuccess ? 'idle' : 'error',
                 subnet: subnet.subnet,
                 txQueue: newQueue
             })

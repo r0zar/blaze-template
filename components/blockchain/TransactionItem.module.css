@@ -1,0 +1,98 @@
+@keyframes mining-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(234, 179, 8, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(234, 179, 8, 0.3);
+  }
+}
+
+@keyframes error-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.3);
+  }
+}
+
+@keyframes mining-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.miningItem {
+  animation: mining-glow 2s infinite ease-in-out, mining-pulse 3s infinite ease-in-out;
+}
+
+.errorItem {
+  animation: error-glow 2s infinite ease-in-out;
+}
+
+.miningIcon {
+  position: relative;
+}
+
+.miningIcon::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(234, 179, 8, 0),
+    rgba(234, 179, 8, 0.8),
+    rgba(234, 179, 8, 0)
+  );
+  animation: rotate 2s linear infinite;
+  z-index: -1;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.miningLabel {
+  position: relative;
+  overflow: hidden;
+}
+
+.miningLabel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    left: 100%;
+  }
+} 

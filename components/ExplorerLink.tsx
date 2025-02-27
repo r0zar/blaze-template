@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import ClientIcon from './ui/ClientIcon';
 
 export type ExplorerLinkVariant = 'button' | 'badge' | 'icon' | 'text' | 'card';
 export type ExplorerLinkSize = 'sm' | 'md' | 'lg';
 
-interface ExplorerLinkProps {
+export interface ExplorerLinkProps {
     txId?: string;
     contractId?: string;
     label?: string;
@@ -70,7 +70,7 @@ const ExplorerLink: React.FC<ExplorerLinkProps> = ({
             title={`View on Stacks Explorer: ${txId || contractId}`}
         >
             {displayLabel}
-            {showIcon && <ExternalLink className={`${size === 'sm' ? 'w-3 h-3' : size === 'lg' ? 'w-5 h-5' : 'w-4 h-4'}`} />}
+            {showIcon && <ClientIcon name="ExternalLink" className={`${size === 'sm' ? 'w-3 h-3' : size === 'lg' ? 'w-5 h-5' : 'w-4 h-4'}`} />}
         </a>
     );
 };

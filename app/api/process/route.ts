@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { subnet } from '../subnet';
-import { triggerPusherEvent } from '../pusher';
-import { EVENTS, BLOCKCHAIN_CHANNEL } from '../../lib/constants';
+import { subnet } from '@/lib/subnet';
+import { triggerPusherEvent } from '@/lib/pusher';
+import { EVENTS, BLOCKCHAIN_CHANNEL } from '@/lib/constants';
 
 // Define transaction interface to match subnet types
 interface Transaction {

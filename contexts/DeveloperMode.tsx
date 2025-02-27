@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 
 interface DeveloperModeContextType {
     isDeveloperMode: boolean;
@@ -9,7 +9,7 @@ interface DeveloperModeContextType {
 
 const DeveloperModeContext = createContext<DeveloperModeContextType | undefined>(undefined);
 
-export function DeveloperModeProvider({ children }: { children: React.ReactNode }) {
+export function DeveloperMode({ children }: { children: React.ReactNode }) {
     // Initialize with false, will update from localStorage after mount
     const [isDeveloperMode, setIsDeveloperMode] = useState(false);
 

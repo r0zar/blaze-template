@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { subnet } from '../../subnet';
+import { subnet } from '@/lib/subnet';
 
 // Set Dynamic to avoid ISR caching
 export const dynamic = 'force-dynamic';

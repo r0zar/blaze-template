@@ -1,5 +1,5 @@
 import Pusher from 'pusher';
-import { EVENTS, BLOCKCHAIN_CHANNEL, EventName } from '../lib/constants';
+import { EVENTS, BLOCKCHAIN_CHANNEL, EventName } from './constants';
 
 // Re-export constants
 export { EVENTS, BLOCKCHAIN_CHANNEL };

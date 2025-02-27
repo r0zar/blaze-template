@@ -1,10 +1,10 @@
-import { subnet } from '../subnet';
+import { subnet } from '@/lib/subnet';
 // Replace Node.js crypto import with Web API compatible UUID generation
 // This is compatible with Edge Runtime
 // import { randomUUID } from 'crypto';
-import * as kvStore from '../kv';
-import { triggerPusherEvent } from '../pusher';
-import { BLOCKCHAIN_CHANNEL, EVENTS } from '@/app/lib/constants';
+import * as kvStore from '@/lib/kv';
+import { triggerPusherEvent } from '@/lib/pusher';
+import { BLOCKCHAIN_CHANNEL, EVENTS } from '@/lib/constants';
 // IMPORTANT: This implementation uses Vercel KV to synchronize batch timers across serverless functions
 // Each instance will use the same timer value from the shared KV store
 
@@ -275,30 +275,36 @@ async function processBatch() {
         // await refreshBalances(true);
         await kvStore.setLastBatchTime(Date.now());
 
+        // Check if the result contains an error
+        const isSuccess = result && !('error' in result && 'reason' in result);
+
         // Send notifications sequentially via Pusher
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.BATCH_PROCESSED, {
             batchSize,
             timestamp: Date.now(),
-            success: true,
+            success: isSuccess,
             result,
-            text: `${batchSize} transactions have been mined in a block and settled on-chain`
+            text: isSuccess
+                ? `${batchSize} transactions have been mined in a block and settled on-chain`
+                : `Transaction batch failed: ${result?.error || 'Unknown error'} - ${result?.reason || ''}`
         });
 
         // await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.BALANCE_UPDATES, state.balances);
 
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {
             status: {
-                state: 'idle',
+                state: isSuccess ? 'idle' : 'error',
                 subnet: subnet.subnet || null,
                 txQueue: state.queue,
                 lastProcessedBlock: null
             },
             time: new Date().toISOString(),
             queue: state.queue,
-            balances: state.balances
+            balances: state.balances,
+            error: isSuccess ? undefined : (result?.error || 'Unknown error')
         });
 
-        console.log(`Successfully processed batch of ${batchSize} transactions`);
+        console.log(`Batch processing ${isSuccess ? 'successful' : 'failed'}: ${isSuccess ? result?.txid : result?.error}`);
     } catch (error) {
         console.error('Error processing batch:', error);
         await triggerPusherEvent(BLOCKCHAIN_CHANNEL, EVENTS.STATUS_UPDATE, {

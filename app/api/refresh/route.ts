@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { subnet, setSubnetSigner } from '../subnet';
-import * as kvStore from '../kv';
-import { triggerPusherEvent } from '../pusher';
-import { BLOCKCHAIN_CHANNEL, EVENTS } from '@/app/lib/constants';
+import { subnet, setSubnetSigner } from '@/lib/subnet';
+import * as kvStore from '@/lib/kv';
+import { triggerPusherEvent } from '@/lib/pusher';
+import { BLOCKCHAIN_CHANNEL, EVENTS } from '@/lib/constants';
 // Configure this route to use the Node.js runtime
 export const runtime = 'nodejs';
 
@@ -110,34 +110,7 @@ export async function POST(request: NextRequest) {
             // Use empty queue as fallback
         }
 
-        // Check if there's an actual processing batch
-        let isProcessingBatch = false;
-        let subnetStatus = 'idle';
-
-        try {
-            // Try to get better status information from subnet
-            const subnetState = typeof subnet.subnet === 'string' ? subnet.subnet : null;
-            if ((subnetState as string | null) === 'processing' || queue.length > 0) {
-                // If subnet state is 'processing' or we have items in queue, consider it processing
-                isProcessingBatch = true;
-                subnetStatus = 'processing';
-            } else if (queue.length > 0) {
-                // We have transactions but not actively processing
-                subnetStatus = 'queued';
-            } else {
-                subnetStatus = 'idle';
-            }
-        } catch (error) {
-            console.error('Error checking subnet processing status:', error);
-            // Default to queue-based status
-            isProcessingBatch = queue.length > 0;
-            subnetStatus = isProcessingBatch ? 'queued' : 'idle';
-        }
-
-        console.log(`Current subnet status: ${subnetStatus}, queue length: ${queue.length}, processing batch: ${isProcessingBatch}`);
-
         const status = {
-            state: subnetStatus,
             subnet: subnet.subnet,
             txQueue: queue,
             lastProcessedBlock: subnet.lastProcessedBlock || 0
@@ -165,7 +138,6 @@ export async function POST(request: NextRequest) {
                 queue,
                 balances: enhancedBalances,
                 time: new Date().toISOString(),
-                isProcessingBatch
             });
             console.log('Sent status update via Pusher');
         } catch (error) {

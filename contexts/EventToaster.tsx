@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function EventToaster({ children }: { children: React.ReactNode }) {
     // Track dark mode
     const [isDarkMode, setIsDarkMode] = useState(false);
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { subnet } from '../../subnet';
-import { triggerPusherEvent, BLOCKCHAIN_CHANNEL, EVENTS } from '../../pusher';
-import { trimQueue, trimStatus } from '../../../lib/utils';
+import { subnet } from '@/lib/subnet';
+import { triggerPusherEvent, BLOCKCHAIN_CHANNEL, EVENTS } from '@/lib/pusher';
+import { trimQueue, trimStatus } from '@/lib/utils';
 
 // Set Dynamic to avoid ISR caching
 export const dynamic = 'force-dynamic';

@@ -2,21 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { Zap, Trash2, ArrowRightLeft, Loader2, RefreshCw } from 'lucide-react';
-import { trimQueue, trimStatus } from '../lib/utils';
-import { useActionButtonState } from '../hooks/useActionButtonState';
-import toast from 'react-hot-toast';
-import { useDeveloperMode } from '../contexts/DeveloperModeContext';
-
+import { trimQueue, trimStatus } from '@/lib/utils';
+import { useDeveloperMode } from '@/contexts/DeveloperMode';
+import { useBlaze } from '@/contexts/blaze/BlazeContext';
 export default function Debug() {
-    const { state, actions } = useActionButtonState();
-    const [isLoading, setIsLoading] = useState(false);
+    const { isRefreshing, connectionState, isLoading, balances, txRequests, isMining, refreshBlazeData, lastBatch } = useBlaze();
     const [isClearingQueue, setIsClearingQueue] = useState(false);
     const [lastResponse, setLastResponse] = useState<any>(null);
     const { isDeveloperMode } = useDeveloperMode();
 
     const handleForceBatch = async () => {
         try {
-            setIsLoading(true);
+            // setIsLoading(true);
             const response = await fetch('/api/debug/force-batch', {
                 method: 'POST',
             });
@@ -36,7 +33,7 @@ export default function Debug() {
             console.error('Error forcing batch:', error);
             setLastResponse({ error: error instanceof Error ? error.message : 'Unknown error' });
         } finally {
-            setIsLoading(false);
+            // setIsLoading(false);
         }
     };
 
@@ -89,13 +86,13 @@ export default function Debug() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="p-4 bg-white/70 dark:bg-black/30 rounded-lg border border-blue-100 dark:border-blue-800">
                         <div className="flex justify-between items-center mb-3">
-                            <h3 className="font-semibold text-blue-800 dark:text-blue-300">Pusher Status</h3>
+                            <h3 className="font-semibold text-blue-800 dark:text-blue-300">Subnet Status</h3>
                             <button
-                                onClick={actions.refreshBlockchainData}
+                                onClick={refreshBlazeData}
                                 className="px-2 py-1 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-300 rounded text-xs flex items-center gap-1 transition-colors"
-                                disabled={state.isRefreshing}
+                                disabled={isRefreshing}
                             >
-                                {state.isRefreshing ? (
+                                {isRefreshing ? (
                                     <>
                                         <Loader2 className="w-3 h-3 animate-spin" />
                                         <span>Refreshing...</span>
@@ -113,16 +110,16 @@ export default function Debug() {
                             <div className="flex items-center justify-between p-2 bg-blue-50/70 dark:bg-blue-900/30 rounded">
                                 <span className="text-xs text-blue-700 dark:text-blue-400 font-medium">Connection:</span>
                                 <div className="flex items-center">
-                                    <div className={`w-2 h-2 rounded-full mr-1.5 ${state.connectionState === 'connected' ? 'bg-green-500' :
-                                        state.connectionState === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                                            state.connectionState === 'error' ? 'bg-red-500' :
+                                    <div className={`w-2 h-2 rounded-full mr-1.5 ${connectionState === 'connected' ? 'bg-green-500' :
+                                        connectionState === 'connecting' ? 'bg-yellow-500 animate-pulse' :
+                                            connectionState === 'error' ? 'bg-red-500' :
                                                 'bg-gray-500'
                                         }`} />
                                     <span className="text-xs font-medium">
-                                        {state.connectionState === 'connected' ? 'Connected' :
-                                            state.connectionState === 'connecting' ? 'Connecting...' :
-                                                state.connectionState === 'error' ? 'Connection Error' :
-                                                    state.connectionState === 'disconnected' ? 'Disconnected' :
+                                        {connectionState === 'connected' ? 'Connected' :
+                                            connectionState === 'connecting' ? 'Connecting...' :
+                                                connectionState === 'error' ? 'Connection Error' :
+                                                    connectionState === 'disconnected' ? 'Disconnected' :
                                                         'Initializing...'}
                                     </span>
                                 </div>
@@ -130,48 +127,29 @@ export default function Debug() {
 
                             <div className="flex items-center justify-between p-2 bg-blue-50/70 dark:bg-blue-900/30 rounded">
                                 <span className="text-xs text-blue-700 dark:text-blue-400 font-medium">Loading:</span>
-                                <span className="text-xs font-medium">{state.isLoading ? '✓' : '✗'}</span>
+                                <span className="text-xs font-medium">{isLoading ? '✓' : '✗'}</span>
                             </div>
 
                             <div className="flex items-center justify-between p-2 bg-blue-50/70 dark:bg-blue-900/30 rounded">
                                 <span className="text-xs text-blue-700 dark:text-blue-400 font-medium">Balances:</span>
-                                <span className="text-xs font-medium">{state.balances ? Object.keys(state.balances).length : 0} addresses</span>
+                                <span className="text-xs font-medium">{balances ? Object.keys(balances).length : 0} addresses</span>
                             </div>
 
                             <div className="flex items-center justify-between p-2 bg-blue-50/70 dark:bg-blue-900/30 rounded">
                                 <span className="text-xs text-blue-700 dark:text-blue-400 font-medium">Queue:</span>
-                                <span className="text-xs font-medium">{state.txRequests?.length || 0} transactions</span>
+                                <span className="text-xs font-medium">{txRequests?.length || 0} transactions</span>
                             </div>
 
                             <div className="flex items-center justify-between p-2 bg-blue-50/70 dark:bg-blue-900/30 rounded">
                                 <span className="text-xs text-blue-700 dark:text-blue-400 font-medium">Last Batch:</span>
-                                <span className="text-xs font-medium">{state.lastBatch ? `${state.lastBatch.batchSize} tx` : 'N/A'}</span>
+                                <span className="text-xs font-medium">{lastBatch ? `${lastBatch.batchSize} tx` : 'N/A'}</span>
                             </div>
 
                             <div className="flex items-center justify-between p-2 bg-blue-50/70 dark:bg-blue-900/30 rounded">
                                 <span className="text-xs text-blue-700 dark:text-blue-400 font-medium">Mining:</span>
-                                <span className="text-xs font-medium">{state.isMining ? 'Active' : 'Idle'}</span>
+                                <span className="text-xs font-medium">{isMining ? 'Active' : 'Idle'}</span>
                             </div>
                         </div>
-
-                        {/* Display status object properties if available */}
-                        {typeof state.pusherStatus === 'object' && state.pusherStatus !== null && (
-                            <div className="mt-2 border-t border-blue-200 dark:border-blue-800 pt-2">
-                                <h4 className="font-semibold text-blue-800 dark:text-blue-300 text-xs mb-1">Status Details:</h4>
-                                <div className="max-h-32 overflow-y-auto p-2 bg-blue-50/70 dark:bg-blue-900/30 rounded text-xs">
-                                    {Object.entries(state.pusherStatus).map(([key, value]) => (
-                                        <div key={key} className="grid grid-cols-3 gap-2 mb-1">
-                                            <span className="text-blue-700 dark:text-blue-400 font-medium">{key}:</span>
-                                            <span className="col-span-2 truncate">
-                                                {typeof value === 'object'
-                                                    ? `${Array.isArray(value) ? value.length + ' items' : JSON.stringify(value).substring(0, 30) + '...'}`
-                                                    : String(value)}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     {/* Debug Action Controls */}

@@ -1,7 +1,7 @@
 'use client';
 
 import PusherClient from 'pusher-js';
-import { EVENTS, BLOCKCHAIN_CHANNEL, EventName } from './constants';
+import { EVENTS, BLOCKCHAIN_CHANNEL } from './constants';
 
 // Detect browser environment
 const isBrowser = typeof window !== 'undefined';
@@ -32,8 +32,11 @@ export interface BatchInfo {
     timestamp: number;
     success: boolean;
     result: {
-        txid: string;
-    }
+        txid?: string;
+        error?: string;
+        reason?: string;
+        [key: string]: any;
+    } | null;
     text: string;
     queue?: any[];
 }
@@ -42,7 +45,7 @@ export interface TransactionUpdate {
     queue: any[];
 }
 
-export interface BlockchainEventHandlers {
+export interface BlazeEventHandlers {
     onBalanceUpdates?: (data: BalanceUpdate) => void;
     onTransactionAdded?: (data: TransactionUpdate) => void;
     onBatchProcessed?: (data: BatchInfo) => void;
@@ -202,7 +205,7 @@ function setupActivityMonitoring(pusher: PusherClient): void {
 /**
  * Subscribe to the blockchain channel and register event handlers
  */
-export function subscribeToBlockchainEvents(handlers: BlockchainEventHandlers): () => void {
+export function subscribeToBlazeEvents(handlers: BlazeEventHandlers): () => void {
     // Only run in browser environment
     if (!isBrowser) return () => { };
 

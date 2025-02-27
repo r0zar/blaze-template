@@ -3,8 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Flame, Menu, X, ExternalLink, BarChart2, Home, HelpCircle, Terminal } from 'lucide-react';
-import TourManager from './TourManager';
-import { useDeveloperMode } from '@/app/contexts/DeveloperModeContext';
+import dynamic from 'next/dynamic';
+import { useDeveloperMode } from '@/contexts/DeveloperMode';
+
+// Dynamically import TourManager with SSR disabled
+const TourManager = dynamic(() => import('./TourManager'), {
+    ssr: false,
+    loading: () => null
+});
 
 export default function NavButton() {
     const [isOpen, setIsOpen] = useState(false);

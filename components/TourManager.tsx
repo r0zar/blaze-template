@@ -3,7 +3,13 @@
 import { useState, useEffect } from 'react';
 import { STATUS, CallBackProps, Step, ACTIONS, EVENTS, Placement } from 'react-joyride';
 import { tourSteps } from '../data/tourSteps';
-import JoyrideWrapper from './JoyrideWrapper';
+import dynamic from 'next/dynamic';
+
+// Dynamically import JoyrideWrapper with SSR disabled
+const JoyrideWrapper = dynamic(() => import('./JoyrideWrapper'), {
+    ssr: false,
+    loading: () => null
+});
 
 interface TourManagerProps {
     isNavTourButtonClicked?: boolean;

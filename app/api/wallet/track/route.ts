@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import * as kvStore from '../../kv';
+import * as kvStore from '@/lib/kv';
 
 /**
  * POST handler for tracking wallet connections

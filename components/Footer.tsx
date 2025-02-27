@@ -1,5 +1,5 @@
-import { Flame, BookOpen, Github, Twitter, ExternalLink } from "lucide-react";
-import ExplorerLink from "./ExplorerLink";
+import ClientIcon from "./ui/ClientIcon";
+import ClientExplorerLink from "./ClientExplorerLink";
 
 export function Footer() {
     return (
@@ -7,13 +7,13 @@ export function Footer() {
             <div className="container mx-auto px-4">
                 <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-8">
                     <div className="flex items-center gap-2">
-                        <Flame className="w-5 h-5 text-[#B22222] dark:text-[#B22222] mb-1" />
+                        <ClientIcon name="Flame" className="w-5 h-5 text-[#B22222] dark:text-[#B22222] mb-1" />
                         <span className="text-sm text-gray-600 dark:text-gray-400">
                             Powered by Blaze Subnets
                         </span>
                     </div>
                     <div className="flex gap-8 text-sm text-gray-600 dark:text-gray-400">
-                        <ExplorerLink
+                        <ClientExplorerLink
                             label="View Contract"
                             variant="text"
                             size="sm"
@@ -25,7 +25,7 @@ export function Footer() {
                             rel="noopener noreferrer"
                             className="hover:text-[#B22222] dark:hover:text-[#DAA520] transition-colors flex items-center gap-2"
                         >
-                            <BookOpen className="w-4 h-4" />
+                            <ClientIcon name="BookOpen" className="w-4 h-4" />
                             Documentation
                         </a>
                         <a
@@ -34,7 +34,7 @@ export function Footer() {
                             rel="noopener noreferrer"
                             className="hover:text-[#B22222] dark:hover:text-[#DAA520] transition-colors flex items-center gap-2"
                         >
-                            <Github className="w-4 h-4" />
+                            <ClientIcon name="Github" className="w-4 h-4" />
                             GitHub
                         </a>
                         <a
@@ -43,7 +43,7 @@ export function Footer() {
                             rel="noopener noreferrer"
                             className="hover:text-[#B22222] dark:hover:text-[#DAA520] transition-colors flex items-center gap-2"
                         >
-                            <Twitter className="w-4 h-4" />
+                            <ClientIcon name="Twitter" className="w-4 h-4" />
                             Twitter
                         </a>
                     </div>
