@@ -9,6 +9,7 @@ import { formatAddress, isValidStacksAddress } from '@/utils/formatters';
 import blaze from 'blaze-sdk';
 import { ChatBot, BOT_INFO } from '@/lib/bot-service';
 import { PointsService } from '@/lib/points-service';
+import { Metadata } from 'next';
 
 // Message structure
 interface Message {
@@ -36,6 +37,18 @@ interface UserProfile {
   joined: number;
   points?: number;
 }
+
+
+
+export const metadata: Metadata = {
+  title: "Blaze | Chatroom",
+  description: "Chat with other users in the Blaze chatroom. Tip others to earn points and climb the ranks.",
+  openGraph: {
+    title: "Blaze | Chatroom",
+    description: "Chat with other users in the Blaze chatroom. Tip others to earn points and climb the ranks.",
+    type: "website",
+  },
+};
 
 export default function ChatroomPage() {
   // Blaze context for wallet and balance
