@@ -54,7 +54,7 @@ export function authenticateChannel(socketId: string, channel: string, presenceD
  */
 export async function triggerPusherEvent(
     channel: string,
-    event: EventName,
+    event: EventName | any,
     data: any
 ): Promise<boolean> {
     // Validate inputs

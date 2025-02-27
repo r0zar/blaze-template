@@ -36,13 +36,13 @@ export default function NavButton() {
             <div className="fixed top-4 right-4 z-50">
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="w-12 h-12 rounded-full bg-white dark:bg-black/80 shadow-lg flex items-center justify-center"
+                    className="w-12 h-12 rounded-full bg-white dark:bg-black/95 shadow-lg flex items-center justify-center"
                 >
                     {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 </button>
 
                 {isOpen && (
-                    <div className="absolute top-16 right-0 w-72 bg-white dark:bg-black/80 rounded-xl shadow-xl p-4 border border-gray-200 dark:border-gray-800">
+                    <div className="absolute top-16 right-0 w-72 bg-white dark:bg-black/95 rounded-xl shadow-xl p-4 border border-gray-200 dark:border-gray-800">
                         <div className="flex items-center gap-2 mb-4">
                             <Flame className="w-5 h-5 text-[#B22222] dark:text-[#B22222]" />
                             <span className="font-semibold">Blaze Subnet</span>

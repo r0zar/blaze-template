@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import pusher, { triggerPusherEvent } from '@/lib/pusher';
-import { CHATROOM_CHANNEL, CHATROOM_EVENTS } from '@/lib/chatroom-client';
+import { CHATROOM } from '@/lib/constants';
 
 export async function POST(request: Request) {
   try {

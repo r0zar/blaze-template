@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Wallet, ArrowUpCircle, Trophy, Heart, Star } from 'lucide-react';
+import { Wallet, ArrowUpCircle, Trophy, Heart, Star, MessageCircle, Settings, DoorClosed, DoorOpen } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useBlaze } from '@/contexts/blaze/BlazeContext';
 import { subscribeToChatroomEvents } from '@/lib/chatroom-client';
@@ -61,8 +61,26 @@ export default function ChatroomPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [userScores, setUserScores] = useState<Record<string, number>>({});
 
+  // Window size tracking for responsive design
+  const [windowWidth, setWindowWidth] = useState<number>(
+    typeof window !== 'undefined' ? window.innerWidth : 1200
+  );
+
   // Get current user wallet address
   const currentAddress = isWalletConnected ? blaze.getWalletAddress() : null;
+
+  // Track window size for responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Determine if we're on a large screen
+  const isLargeScreen = windowWidth >= 1280;
 
   // Save nickname to localStorage when it changes
   useEffect(() => {
@@ -99,7 +117,7 @@ export default function ChatroomPage() {
         // Process bot response
         const botResponse = await ChatBot.processMessage(data);
         if (botResponse) {
-          const botMessage: Message = {
+          const botMessage = {
             id: `bot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             address: BOT_INFO.address,
             nickname: BOT_INFO.nickname,
@@ -109,8 +127,21 @@ export default function ChatroomPage() {
           };
 
           // Add slight delay for bot response
-          setTimeout(() => {
-            setMessages(prev => [...prev, botMessage]);
+          setTimeout(async () => {
+            try {
+              // Send bot message through the API and wait for it to complete
+              const response = await fetch('/api/chatroom/message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(botMessage)
+              });
+
+              if (!response.ok) {
+                throw new Error('Failed to send bot message');
+              }
+            } catch (err) {
+              console.error('Failed to send bot message:', err);
+            }
           }, 1000);
         }
       },
@@ -193,8 +224,8 @@ export default function ChatroomPage() {
         console.log('Final member array with bot:', memberArray);
         setUsers(memberArray);
 
-        // Add bot welcome message
-        const welcomeMessage: Message = {
+        // Send bot welcome message through the API
+        const welcomeMessage = {
           id: `bot-welcome-${Date.now()}`,
           address: BOT_INFO.address,
           nickname: BOT_INFO.nickname,
@@ -202,7 +233,19 @@ export default function ChatroomPage() {
           timestamp: Date.now(),
           tips: 0
         };
-        setMessages(prev => [...prev, welcomeMessage]);
+
+        // Wait for the welcome message to be sent before proceeding
+        fetch('/api/chatroom/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(welcomeMessage)
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to send welcome message');
+            }
+          })
+          .catch(err => console.error('Failed to send welcome message:', err));
       },
       onMemberAdded: (member) => {
         console.log('Member added:', member);
@@ -506,13 +549,13 @@ export default function ChatroomPage() {
   // Render user join form
   if (!hasJoined) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-8">
-        <div className="w-full max-w-md p-6 bg-white dark:bg-black/40 rounded-lg shadow-xl border border-gray-200 dark:border-gray-800">
-          <h1 className="text-2xl font-bold mb-6 text-center">Join the Chatroom</h1>
+      <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-gradient-to-b from-black to-gray-900">
+        <div className="w-full max-w-md p-6 bg-black/70 backdrop-blur-sm rounded-lg shadow-xl border border-gray-800">
+          <h1 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-red-500 to-yellow-500 bg-clip-text text-transparent">Join the Chatroom</h1>
 
           {!isWalletConnected ? (
-            <div className="text-center mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-              <p className="text-yellow-700 dark:text-yellow-200 mb-2">Connect your wallet to continue</p>
+            <div className="text-center mb-4 p-4 bg-yellow-900/20 rounded-lg border border-yellow-800/50">
+              <p className="text-yellow-400 mb-2">Connect your wallet to continue</p>
             </div>
           ) : (
             <div className="mb-6">
@@ -521,7 +564,7 @@ export default function ChatroomPage() {
                 type="text"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900"
+                className="w-full p-3 border border-gray-700 rounded-lg bg-gray-900/60 focus:outline-none focus:border-red-500 transition-colors"
                 placeholder="Your nickname"
                 maxLength={20}
               />
@@ -529,14 +572,14 @@ export default function ChatroomPage() {
               <button
                 onClick={handleJoin}
                 disabled={!nickname.trim()}
-                className="w-full mt-4 py-2 px-4 bg-gradient-to-r from-red-500 to-yellow-500 text-white rounded-lg font-medium disabled:opacity-50"
+                className="w-full mt-4 py-3 px-4 bg-gradient-to-r from-red-500 to-yellow-500 text-white rounded-lg font-medium disabled:opacity-50 hover:from-red-600 hover:to-yellow-600 transition-all shadow-lg hover:shadow-red-500/20"
               >
                 Join Chatroom
               </button>
             </div>
           )}
 
-          <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-4">
+          <div className="text-sm text-gray-400 text-center mt-6 border-t border-gray-800 pt-4">
             <p>Tip chatters with WELSH tokens and compete for the most tips!</p>
           </div>
         </div>
@@ -549,52 +592,63 @@ export default function ChatroomPage() {
 
   // Render main chatroom
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-black to-gray-900">
       <div className="flex-1 flex flex-col">
-        {/* Compact Header */}
-        <div className="bg-black/40 border-b border-gray-800 p-2">
+        {/* Improved Header */}
+        <div className="bg-black/60 backdrop-blur-sm border-b border-gray-800 py-3 px-4 sticky top-0 z-10 shadow-lg">
           <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-            <h1 className="text-lg font-bold">Chatroom: Tip & Win</h1>
-            <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-red-500 to-yellow-500 bg-clip-text text-transparent flex items-center">
+              <MessageCircle className="w-5 h-5 mr-2 text-red-500" />
+              Chatroom: Tip & Win
+            </h1>
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowLeaderboard(!showLeaderboard)}
-                className="flex items-center gap-1 py-1 px-2 text-xs bg-yellow-900/40 text-yellow-200 rounded-full hover:bg-yellow-800/60 transition-colors"
+                className={`flex xl:hidden items-center gap-2 py-1.5 px-3 rounded-full transition-colors ${showLeaderboard
+                  ? 'bg-yellow-500 text-black hover:bg-yellow-400'
+                  : 'bg-yellow-900/40 text-yellow-300 hover:bg-yellow-800/60'
+                  }`}
               >
-                <Trophy className="w-3 h-3" />
-                {showLeaderboard ? 'Chat' : 'Ranks'}
+                <Trophy className="w-4 h-4" />
+                <span className="hidden sm:inline">{showLeaderboard ? 'Show Chat' : 'Leaderboard'}</span>
               </button>
               <button
                 onClick={handleLeave}
-                className="flex items-center gap-1 py-1 px-2 text-xs bg-red-900/40 text-red-200 rounded-full hover:bg-red-800/60 transition-colors"
+                className="flex items-center gap-2 py-1.5 px-3 bg-red-900/40 text-red-300 rounded-full hover:bg-red-800/60 transition-colors"
               >
-                Leave
+                <DoorOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Leave</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Main content */}
+        {/* Main content with better space utilization */}
         <div className="flex-1 flex">
           {/* Chat section */}
-          <div className={`flex-1 p-2 ${showLeaderboard ? 'hidden md:block' : 'block'}`}>
-            <div className="max-w-4xl mx-auto h-full flex flex-col">
-              <div className="flex-1 border border-gray-800 bg-black/40 rounded-lg overflow-hidden flex flex-col">
-                {/* Messages container - more compact spacing */}
-                <div className="flex-1 p-2 overflow-y-auto">
+          <div className={`flex-1 p-4 ${showLeaderboard && !isLargeScreen ? 'hidden' : 'block'}`}>
+            <div className={`mx-auto h-full flex flex-col ${isLargeScreen ? 'max-w-5xl' : 'max-w-4xl'}`}>
+              <div className="flex-1 border border-gray-800 bg-black/40 backdrop-blur-sm rounded-lg overflow-hidden flex flex-col shadow-2xl">
+                {/* Messages container */}
+                <div className="flex-1 p-4 overflow-y-auto">
                   {messages.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-gray-500">
-                      No messages yet. Be the first to chat!
+                      <div className="text-center">
+                        <MessageCircle className="w-12 h-12 mx-auto text-gray-700 mb-4" />
+                        <p className="text-lg">No messages yet. Be the first to chat!</p>
+                        <p className="text-sm mt-2 text-gray-600">Try saying hello or mentioning @gm to talk to the game master.</p>
+                      </div>
                     </div>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {groupedMessages.map(renderGroupedMessage)}
                       <div ref={messagesEndRef} />
                     </div>
                   )}
                 </div>
 
-                {/* Message input - more compact */}
-                <div className="p-2 border-t border-gray-800 bg-black/20">
+                {/* Message input - improved */}
+                <div className="p-4 border-t border-gray-800 bg-black/40">
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -602,12 +656,12 @@ export default function ChatroomPage() {
                       onChange={(e) => setMessageInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                       placeholder="Type your message here..."
-                      className="flex-1 p-2 border border-gray-700 rounded-lg bg-gray-900 focus:outline-none focus:border-gray-600 text-sm"
+                      className="flex-1 p-3 border border-gray-700 rounded-lg bg-gray-900/80 focus:outline-none focus:border-red-500 text-sm transition-colors"
                     />
                     <button
                       onClick={handleSendMessage}
                       disabled={!messageInput.trim()}
-                      className="px-3 bg-gradient-to-r from-red-500 to-yellow-500 text-white rounded-lg font-medium disabled:opacity-50 hover:from-red-600 hover:to-yellow-600 transition-colors text-sm"
+                      className="px-4 bg-gradient-to-r from-red-500 to-yellow-500 text-white rounded-lg font-medium disabled:opacity-50 hover:from-red-600 hover:to-yellow-600 transition-colors shadow-lg"
                     >
                       Send
                     </button>
@@ -617,40 +671,63 @@ export default function ChatroomPage() {
             </div>
           </div>
 
-          {/* Compact Leaderboard */}
-          <div className={`w-64 border-l border-gray-800 ${showLeaderboard ? 'block' : 'hidden md:block'}`}>
-            <div className="h-full flex flex-col p-2">
+          {/* Improved Leaderboard */}
+          <div className={`${isLargeScreen ? 'w-80' : 'w-full'} ${showLeaderboard || isLargeScreen ? 'block' : 'hidden'} ${isLargeScreen ? 'border-l border-gray-800' : ''} p-4`}>
+            <div className="h-full flex flex-col">
               <div className="flex-1 flex flex-col">
-                <h2 className="text-sm font-semibold mb-2 flex items-center gap-1">
-                  <Trophy className="w-4 h-4 text-yellow-500" />
-                  Leaderboard ({users.length})
-                </h2>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-yellow-500" />
+                    Leaderboard
+                  </h2>
+                  <span className="bg-yellow-900/40 text-yellow-300 py-1 px-2 rounded-full text-xs">
+                    {users.length} Players
+                  </span>
+                </div>
 
                 {users.length === 0 ? (
-                  <div className="flex-1 flex items-center justify-center text-gray-500 text-xs">
-                    <p>No users have joined yet.</p>
+                  <div className="flex-1 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <p>No users have joined yet.</p>
+                      <p className="text-sm mt-2">Current user: {nickname}</p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="space-y-1 overflow-y-auto text-xs">
+                  <div className="space-y-2 overflow-y-auto max-h-[60vh] pr-1">
                     {[...users]
                       .sort((a, b) => (userScores[b.address] || 0) - (userScores[a.address] || 0))
                       .map((user, index) => (
                         <div
                           key={user.address}
-                          className={`p-1.5 rounded-lg border ${user.address === currentAddress
-                            ? 'bg-green-900/20 border-green-800'
-                            : 'bg-gray-900/40 border-gray-800'
+                          className={`p-3 rounded-lg border ${user.address === currentAddress
+                            ? 'bg-green-900/30 border-green-700'
+                            : index < 3
+                              ? 'bg-yellow-900/20 border-yellow-700/50'
+                              : 'bg-gray-900/40 border-gray-800'
                             }`}
                         >
-                          <div className="flex items-center gap-1">
-                            <div className="flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-br from-yellow-500 to-yellow-300 text-white font-bold text-xs">
+                          <div className="flex items-center gap-3">
+                            <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${index === 0
+                              ? 'bg-gradient-to-br from-yellow-300 to-yellow-600 text-black'
+                              : index === 1
+                                ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-black'
+                                : index === 2
+                                  ? 'bg-gradient-to-br from-yellow-700 to-yellow-900 text-white'
+                                  : 'bg-gray-800 text-gray-200'
+                              }`}>
                               {index + 1}
                             </div>
                             <div className="overflow-hidden">
-                              <div className="font-medium truncate max-w-36">{user.nickname}</div>
-                              <div className="flex justify-between">
-                                <span className="text-yellow-400">{userScores[user.address] || 0}pts</span>
-                                <span className="text-gray-400">{user.totalTips} tips</span>
+                              <div className="font-medium truncate max-w-40">{user.nickname}</div>
+                              <div className="flex items-center gap-2 text-sm">
+                                <span className="flex items-center gap-1 text-yellow-400">
+                                  <Star className="w-3 h-3 fill-yellow-400" />
+                                  {userScores[user.address] || 0}
+                                </span>
+                                <span className="flex items-center gap-1 text-red-400">
+                                  <Heart className="w-3 h-3 fill-red-400" />
+                                  {user.totalTips}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -660,20 +737,45 @@ export default function ChatroomPage() {
                 )}
               </div>
 
-              {/* User Stats - Compact */}
-              <div className="mt-2 p-2 border border-gray-800 bg-black/40 rounded-lg text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{nickname}</span>
-                  <span>{formatAddress(currentAddress || '')}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-1 mt-1">
-                  <div>Points: {currentAddress ? userScores[currentAddress] || 0 : 0}</div>
-                  <div>Tips: {users.find(u => u.address === currentAddress)?.totalTips || 0}</div>
-                  <div className="col-span-2">
-                    Balance: {currentAddress && balances[currentAddress]
-                      ? Number(balances[currentAddress] / 10 ** 6).toLocaleString()
-                      : 0} WELSH
+              {/* Improved User Stats */}
+              <div className="mt-4 p-4 border border-gray-800 bg-black/40 rounded-lg shadow-lg backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-medium text-lg">{nickname}</span>
+                  <div className="bg-red-900/30 text-red-300 py-1 px-2 rounded-full text-xs">
+                    {formatAddress(currentAddress || '')}
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-black/30 p-2 rounded border border-gray-800 flex flex-col items-center">
+                    <Star className="w-5 h-5 text-yellow-500 mb-1" />
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-yellow-400">{currentAddress ? userScores[currentAddress] || 0 : 0}</div>
+                      <div className="text-xs text-gray-400">Points</div>
+                    </div>
+                  </div>
+                  <div className="bg-black/30 p-2 rounded border border-gray-800 flex flex-col items-center">
+                    <Heart className="w-5 h-5 text-red-500 mb-1" />
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-red-400">{users.find(u => u.address === currentAddress)?.totalTips || 0}</div>
+                      <div className="text-xs text-gray-400">Tips Received</div>
+                    </div>
+                  </div>
+                  <div className="col-span-2 bg-black/30 p-2 rounded border border-gray-800">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-400">Balance:</span>
+                      <span className="font-semibold text-yellow-400">
+                        {currentAddress && balances[currentAddress]
+                          ? Number(balances[currentAddress] / 10 ** 6).toLocaleString()
+                          : 0} WELSH
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Help Section */}
+                <div className="mt-3 text-xs text-gray-500 bg-black/30 p-2 rounded border border-gray-800">
+                  <p>• Type <span className="text-yellow-400">@gm</span> to talk to the Game Master</p>
+                  <p>• Tip others to earn points and climb the ranks</p>
                 </div>
               </div>
             </div>

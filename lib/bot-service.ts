@@ -2,7 +2,7 @@ import { Message } from './chatroom-client';
 
 export const BOT_INFO = {
     address: 'bot-host',
-    nickname: '🎮 GameMaster',
+    nickname: 'GameMaster',
     totalTips: 0,
     joined: Date.now()
 };
@@ -26,6 +26,8 @@ export class ChatBot {
     static async processMessage(message: Message): Promise<BotResponse | null> {
         // Add message to history
         this.addToHistory(message);
+
+        console.log('Processing message:', message);
 
         // Don't respond to system messages
         if (message.address === 'system') return null;
